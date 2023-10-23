@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RestAPI Test</title>
+    <script>
+        function testRestAPI() {
+            const url = "http://192.168.4.1/";
+            const methods = ["GET", "HEAD", "DELETE", "PUT", "PATCH", "POST"];
+            const testData = JSON.stringify({
+                foo: {
+                    bar: 42,
+                    baz: [1.2, 3.14, 17.8]
+                }
+            });
+            
+            for(let method of methods) {
+                makeRequest(url, {method: method, body: testData})
+                .then((response) => {
+                    console.assert(response.status >= 200 && response.status <300, `Response Code not 2xx, but ${response.status}`);
+                });
+            }
+        }
+
+        async function makeRequest(url, request) {
+            const methodsWithBody = ["PUT", "POST", "PATCH"];
+            const response = await fetch(url, {
+                method: request.method,
+                body: methodsWithBody.includes(request.method) ? request.body : undefined
+            });
+            return {
+                status: response.status,
+                body: await response.text()
+            }
+        }
+    </script>
+</head>
+
+<body>
+    <button type="button" onclick="testRestAPI()">Test</button>
+</body>
+
+</html>
