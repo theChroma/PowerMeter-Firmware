@@ -4,7 +4,6 @@
 #include "Encryption/Certificate.h"
 #include "Encryption/PrivateKey.h"
 
-
 namespace Globals
 {
     const std::string FirmwareVersion = "0.0.0";
@@ -18,10 +17,8 @@ namespace Globals
     ACPowerMeter PowerMeter;
     DS3231 RTC;
     std::unordered_map<std::string, Tracker> Trackers;
-    HTTPSServer Server = HTTPSServer(
-        SSLContext("/SSL/Certificate.der"),
-        SSLContext("/SSL/PrivateKey.der"),
-        443, 
+    HTTPServer Server = HTTPServer(
+        80, 
         {{"Access-Control-Allow-Origin", "*"}}
     );
     RestAPI API = RestAPI(Server, "/api");

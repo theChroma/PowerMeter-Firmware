@@ -22,7 +22,7 @@ namespace Globals
     extern ACPowerMeter PowerMeter;
     extern DS3231 RTC;
     extern std::unordered_map<std::string, Tracker> Trackers;
-    extern HTTPSServer Server;
+    extern HTTPServer Server;
     extern RestAPI API;
 }
 

@@ -6,6 +6,7 @@
 #include "Globals/Globals.h"
 #include <Arduino.h>
 #include <WiFi.h>
+#include <ESPmDNS.h>
 #include <fstream>
 
 
@@ -208,6 +209,11 @@ void Config::configureWiFi()
                 << "'. " 
                 << "IP: http://" << WiFi.localIP().toString().c_str()
                 << std::endl;
+            
+            MDNS.end();
+            MDNS.begin("powermeter-abc");
+            MDNS.addService("http", "tcp", 80);
+            MDNS.addService("powermeter", "tcp", 80);
             return;
         }
 
