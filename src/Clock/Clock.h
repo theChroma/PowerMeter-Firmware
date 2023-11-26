@@ -1,13 +1,13 @@
-#ifndef CLOCK_H
-#define CLOCK_H
+#pragma once
 
 #include <time.h>
 
-class Clock
+namespace PM
 {
-public:
-    virtual time_t now() const noexcept = 0;
-    virtual ~Clock() noexcept {};
-};
-
-#endif
+    class Clock
+    {
+    public:
+        virtual time_t now() const noexcept = 0;
+        inline virtual ~Clock() noexcept {};
+    };
+}

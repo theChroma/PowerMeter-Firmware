@@ -1,0 +1,10 @@
+{
+    "selected": "Simulation",
+    "options": {
+        "Simulation": {
+            "startTimestamp": 0,
+            "fastForward": 1
+        },
+        "DS3231": {}
+    }
+}

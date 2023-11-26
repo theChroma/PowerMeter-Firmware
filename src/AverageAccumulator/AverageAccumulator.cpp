@@ -1,7 +1,8 @@
 #include "AverageAccumulator.h"
 
+using PM::AverageAccumulator;
 
-AverageAccumulator::AverageAccumulator(const JsonURI& storageURI) : m_storageURI(storageURI)
+AverageAccumulator::AverageAccumulator(const JsonResource& storageResource) : m_storageResource(storageResource)
 {}
 
 
@@ -43,7 +44,7 @@ void AverageAccumulator::reset()
 
 void AverageAccumulator::erase() const
 {
-    m_storageURI.erase();
+    m_storageResource.erase();
 }
 
 
@@ -52,7 +53,7 @@ void AverageAccumulator::serialize()
     json data;
     data["count"] = m_count;
     data["sum"] = m_sum;
-    m_storageURI.serialize(data);
+    m_storageResource.serialize(data);
 }
 
 
@@ -60,7 +61,7 @@ void AverageAccumulator::deserialize()
 {
     try
     {
-        json data = m_storageURI.deserialize();
+        json data = m_storageResource.deserialize();
         m_count = data.at("count");
         m_sum = data.at("sum");
     }

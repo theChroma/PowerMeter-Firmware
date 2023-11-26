@@ -1,4 +1,4 @@
-#include "Measuring/ACPowerMeter.h"
+#include "Measuring/MeasuringUnit.h"
 #include "Connectivity/RestAPI.h"
 #include "Diagnostics/Log.h"
 
@@ -12,7 +12,7 @@ constexpr float currentCalibration = 15.7;
 constexpr float phaseCalibration = -5.6;
 
 
-Measuring::ACPowerMeter powerMeter(voltagePin, currentPin);
+Measuring::MeasuringUnit powerMeter(voltagePin, currentPin);
 AsyncWebServer server(80);
 Measuring::ACPower power(0, 0, 0);
 

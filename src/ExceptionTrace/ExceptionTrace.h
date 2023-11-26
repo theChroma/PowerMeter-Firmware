@@ -1,14 +1,13 @@
-#ifndef EXCEPTIONTRACE_H
-#define EXCEPTIONTRACE_H
+#pragma once
 
 #include <string>
 
-
-namespace ExceptionTrace
+namespace PM
 {
-    void trace(const std::string& message) noexcept;
-    void clear() noexcept;
-    std::string what(size_t indentLevel = 1, char indentChar = ' ');
+    namespace ExceptionTrace
+    {
+        void trace(const std::string& message) noexcept;
+        void clear() noexcept;
+        std::string what(size_t indentLevel = 1, char indentChar = ' ');
+    }
 }
-
-#endif

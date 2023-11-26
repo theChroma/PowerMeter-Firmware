@@ -1,211 +1,258 @@
 #ifdef ESP32
 
 #include "Config.h"
-#include "Log/Log.h"
+#include "Logger/Logger.h"
+#include "SourceLocation/SourceLocation.h"
+#include "Clock/DS3231/DS3231.h"
+#include "Clock/SimulationClock/SimulationClock.h"
+#include "MeasuringUnit/AcMeasuringUnit/AcMeasuringUnit.h"
+#include "MeasuringUnit/SimulationMeasuringUnit/SimulationMeasuringUnit.h"
+#include "Switch/NoSwitch/NoSwitch.h"
+#include "Switch/Relay/Relay.h"
 #include "ExceptionTrace/ExceptionTrace.h"
-#include "Globals/Globals.h"
 #include <Arduino.h>
 #include <WiFi.h>
 #include <ESPmDNS.h>
+#include <tl/optional.hpp>
 #include <fstream>
+#include <functional>
+#include <unordered_map>
 
+using namespace PM;
+using tl::optional;
 
-void Config::configureLogger()
+namespace
 {
-    try
+    std::ostream& getConsoleByName(const std::string& name)
     {
-        Logger[Level::Info] << "Configuring Logger..." << std::endl;
-        json loggerConfigJson = Globals::LoggerConfigURI.deserialize();
+        std::unordered_map<std::string, std::ostream&> consoles = {
+            {"stdout", std::cout},
+            {"stderr", std::cerr},
+            {"stdlog", std::clog},
+        };
+        return consoles.at(name);
+    }
 
-        Serial.begin(loggerConfigJson.at("baudRate"));
-        Logger.setLevel(Log::getLevelByName(loggerConfigJson.at("level")));
-        Logger.setShowLevel(loggerConfigJson.at("showLevel"));
-        const std::string& logFilePath = loggerConfigJson.at("logFile");
-
-        static std::ofstream logFile;
-        if (loggerConfigJson.at("fileMode"))
+    LogStream configureLogStream(const json& configJson)
+    {
+        LogLevel minLevel = configJson.at("minLevel").get<std::string>();
+        LogLevel maxLevel = configJson.at("maxLevel").get<std::string>();
+        bool showLevel = configJson.at("showLevel");
+        if (configJson.at("type") == "file")
         {
-            logFile.open(logFilePath);
-            Logger.setOutputStream(&logFile);
+            static std::vector<std::ofstream> logFiles;
+            logFiles.emplace_back(configJson.at("filePath"));
+            return LogStream(minLevel, maxLevel, logFiles.back(), showLevel);
         }
-
-        Logger[Level::Info] << "Logger configured sucessfully." << std::endl;
+        return LogStream(minLevel, maxLevel, getConsoleByName(configJson.at("console")), showLevel);
     }
-    catch (...)
+
+    template<typename T>
+    using ImplementaitonMap = std::unordered_map<std::string, std::function<T&(const json&)>>; 
+
+
+    template<typename T>
+    T& configureImplementation(const json& configJson)
     {
-        std::stringstream errorMessage;
-        errorMessage << SOURCE_LOCATION << "Failed to configure 'Logger' from \"" << Globals::LoggerConfigURI << '"';
-        ExceptionTrace::trace(errorMessage.str());
-        throw;
+        static optional<T> implementation;
+        implementation.emplace(configJson);
+        return implementation.value();
     }
-}
 
 
-void Config::configureACPowerMeter()
-{
-    Logger[Level::Info] << "Configuring 'ACPowerMeter'..." << std::endl;
-    try
+    template<typename T>
+    T& getSelectedImplementation(const JsonResource& configResource, const ImplementaitonMap<T>& implementations)
     {
-        json powerMeterConfigJson = Globals::MeasuringConfigURI.deserialize();
-
-        uint16_t pinU = powerMeterConfigJson.at("/pins/voltage"_json_pointer);
-        uint16_t pinI = powerMeterConfigJson.at("/pins/current"_json_pointer);
-        Globals::PowerMeter.setPins(pinU, pinI);
-
-        float calU = powerMeterConfigJson.at("/calibration/voltage"_json_pointer);
-        float calI = powerMeterConfigJson.at("/calibration/current"_json_pointer);
-        float calPhase = powerMeterConfigJson.at("/calibration/phase"_json_pointer);
-        Globals::PowerMeter.calibrate(calU, calI, calPhase);
-
-        Logger[Level::Info] << "Measuring unit configured sucessfully." << std::endl;
+        json configJson = configResource.deserialize();
+        std::string key = configJson.at("selected");
+        return implementations.at(key)(configJson.at("options").at(key));
     }
-    catch (...)
+
+
+    bool configureWiFiStationary(const json& configJson)
     {
-        std::stringstream errorMessage;
-        errorMessage << SOURCE_LOCATION << "Failed to configure 'ACPowerMeter' from \"" << Globals::MeasuringConfigURI << '"';
-        ExceptionTrace::trace(errorMessage.str());
-        throw;
-    }
-}
-
-
-void Config::configureRelay()
-{
-    try
-    {
-        Logger[Level::Info] << "Configuring relay..." << std::endl;
-
-        json relayConfigJson = Globals::RelayConfigURI.deserialize();
-        uint16_t pin = relayConfigJson.at("pin");
-        bool state = Globals::RelayStateURI.deserialize();
-        pinMode(pin, OUTPUT);
-        digitalWrite(pin, state);
-
-        Logger[Level::Info] << "Relay configured sucessfully." << std::endl;
-    }
-    catch (...)
-    {
-        std::stringstream errorMessage;
-        errorMessage << SOURCE_LOCATION << "Failed to configure Relay from \"" << Globals::RelayConfigURI << '"';
-        ExceptionTrace::trace(errorMessage.str());
-        throw;
-    }
-}
-
-
-void Config::configureTrackers()
-{
-    try
-    {
-        Logger[Level::Info] << "Configuring trackers..." << std::endl;
-
-        json jsonTrackers = Globals::TrackersConfigURI.deserialize();
-        for(const auto& jsonTracker : jsonTrackers.items())
+        Logger[LogLevel::Info] << "Configuring WiFi in stationary mode..." << std::endl;
+        try
         {
-            std::string key = jsonTracker.key();
+            const std::string& ssid = configJson.at("ssid");
+            const std::string& password = configJson.at("password");
+            const std::string& staticIP = configJson.at("staticIP");
+            const std::string& gateway = configJson.at("gateway");
+            const std::string& subnet = configJson.at("subnet");
+
+            auto parseIP = [](const std::string& address)
+            {
+                IPAddress ip;
+                if (!ip.fromString(address.c_str()))
+                    Logger[LogLevel::Warning] << SOURCE_LOCATION << "Could not convert \"" << address << "\" to 'IPAdress'" << std::endl;
+                return ip;
+            };
+            
+            WiFi.disconnect(true);
+            WiFi.config(parseIP(staticIP), parseIP(gateway), parseIP(subnet));
+            WiFi.begin(ssid.c_str(), password.c_str());
+            WiFi.setSleep(false);
+
+            if(WiFi.waitForConnectResult(3000) == WL_CONNECTED)
+                return true;
+        }
+        catch(...)
+        {
+            ExceptionTrace::trace(SOURCE_LOCATION + "Failed to configure WiFi in Stationary Mode");
+            throw;
+        }
+        return false;
+    }
+
+
+    bool configureWifiAccesspoint(const json& configJson)
+    {
+        Logger[LogLevel::Info] << "Configuring WiFi as accesspoint..." << std::endl;
+        try
+        {
+            const std::string& ssid = configJson.at("ssid");
+            const std::string& password = configJson.at("password");
+            return WiFi.softAP(ssid.c_str(), password.c_str());
+        }
+        catch(...)
+        {
+            ExceptionTrace::trace(SOURCE_LOCATION + "Failed to configure WiFi as accesspoint from");
+            throw;
+        }
+    }
+}
+
+void Config::configureLogger(const JsonResource& configResource)
+{
+    try
+    {
+        Logger[LogLevel::Info] << "Configuring Logger..." << std::endl;
+
+        json configJson = configResource.deserialize();
+        Serial.begin(configJson.at("baudRate"));
+        std::vector<LogStream> streams;
+        for (const auto& streamJson : configJson.at("streams"))
+        {
+            streams.push_back(configureLogStream(streamJson));    
+        }
+        Logger = streams;
+
+        Logger[LogLevel::Info] << "Logger configured sucessfully." << std::endl;
+    }
+    catch (...)
+    {
+        ExceptionTrace::trace(SOURCE_LOCATION + "Failed to configure Logger");
+        throw;
+    }
+}
+
+
+MeasuringUnit& Config::configureMeasuringUnit(const JsonResource& configResource)
+{
+    Logger[LogLevel::Info] << "Configuring measuring unit..." << std::endl;
+    try
+    {
+        ImplementaitonMap<MeasuringUnit> measuringUnits = {
+            {"Ac", configureImplementation<AcMeasuringUnit>}, 
+            {"Simulation", configureImplementation<SimulationMeasuringUnit>}, 
+        };
+        return getSelectedImplementation<MeasuringUnit>(configResource, measuringUnits);
+    }
+    catch (...)
+    {
+        ExceptionTrace::trace(SOURCE_LOCATION + "Failed to configure measuring unit");
+        throw;
+    }
+}
+
+
+Clock& Config::configureClock(const JsonResource& configResource)
+{
+    Logger[LogLevel::Info] << "Configuring clock..." << std::endl;
+    try
+    {
+        ImplementaitonMap<Clock> clocks = {
+            {"DS3231", configureImplementation<DS3231>}, 
+            {"Simulation", configureImplementation<SimulationClock>}, 
+        };
+        return getSelectedImplementation<Clock>(configResource, clocks);
+    }
+    catch (...)
+    {
+        ExceptionTrace::trace(SOURCE_LOCATION + "Failed to configure clock");
+        throw;
+    }
+}
+
+
+Switch& Config::configureSwitch(const JsonResource& configResource)
+{
+    Logger[LogLevel::Info] << "Configuring switch..." << std::endl;
+    try
+    {
+        ImplementaitonMap<Switch> switches = {
+            {"None", configureImplementation<NoSwitch>}, 
+            {"Relay", configureImplementation<Relay>}, 
+        };
+        return getSelectedImplementation<Switch>(configResource, switches);
+    }
+    catch (...)
+    {
+        ExceptionTrace::trace(SOURCE_LOCATION + "Failed to configure Switch");
+        throw;
+    }
+}
+
+
+TrackerMap Config::configureTrackers(const JsonResource& configResource, Clock& clock)
+{
+    Logger[LogLevel::Info] << "Configuring trackers..." << std::endl;
+    TrackerMap trackers;
+    try
+    {
+        json configJson = configResource.deserialize();
+        for(const auto& trackerJson : configJson.items())
+        {
+            std::string key = trackerJson.key();
             std::stringstream trackerDirectory;
             trackerDirectory << "/Trackers/" << key << '/';
 
-            Globals::Trackers.emplace(key, Tracker(
-                jsonTracker.value().at("title"),
-                jsonTracker.value().at("duration_s"),
-                jsonTracker.value().at("sampleCount"),
-                Globals::RTC,
-                JsonURI(trackerDirectory.str() + "data.json"),
-                JsonURI(trackerDirectory.str() + "timestamps.json#/lastInput"),
-                JsonURI(trackerDirectory.str() + "timestamps.json#/lastSample"),
-                AverageAccumulator(JsonURI(trackerDirectory.str() + "accumulator.json"))
+            trackers.emplace(key, Tracker(
+                trackerJson.value().at("title"),
+                trackerJson.value().at("duration_s"),
+                trackerJson.value().at("sampleCount"),
+                clock,
+                JsonResource(trackerDirectory.str() + "data.json"),
+                JsonResource(trackerDirectory.str() + "timestamps.json#/lastInput"),
+                JsonResource(trackerDirectory.str() + "timestamps.json#/lastSample"),
+                AverageAccumulator(JsonResource(trackerDirectory.str() + "accumulator.json"))
             ));
         }
-
-        Logger[Level::Info] << "Trackers configured sucessfully." << std::endl;
+        Logger[LogLevel::Info] << "Trackers configured sucessfully." << std::endl;
     }
     catch (...)
     {
-        std::stringstream errorMessage;
-        errorMessage << SOURCE_LOCATION << "Failed to configure trackers from \"" << Globals::TrackersConfigURI << '"';
-        ExceptionTrace::trace(errorMessage.str());
+        ExceptionTrace::trace(SOURCE_LOCATION + "Failed to configure trackers");
         throw;
     }
+    return trackers;
 }
 
 
-bool Config::configureWiFiStationary()
+void Config::configureWiFi(const JsonResource& configResource)
 {
-    Logger[Level::Info] << "Configuring WiFi in stationary mode..." << std::endl;
-    JsonURI staConfigURI = Globals::WiFiConfigURI / "/sta"_json_pointer;
-    try
-    {
-        json staConfigJson = staConfigURI.deserialize();
-
-        const std::string& ssid = staConfigJson.at("ssid");
-        const std::string& password = staConfigJson.at("password");
-        const std::string& staticIP = staConfigJson.at("staticIP");
-        const std::string& gateway = staConfigJson.at("gateway");
-        const std::string& subnet = staConfigJson.at("subnet");
-
-        auto parseIP = [](const std::string& address)
-        {
-            IPAddress ip;
-            if (!ip.fromString(address.c_str()))
-                Logger[Level::Warning] << SOURCE_LOCATION << "Could not convert \"" << address << "\" to 'IPAdress'" << std::endl;
-            return ip;
-        };
-        
-        WiFi.disconnect(true);
-        WiFi.config(parseIP(staticIP), parseIP(gateway), parseIP(subnet));
-        WiFi.begin(ssid.c_str(), password.c_str());
-        WiFi.setSleep(false);
-
-        if(WiFi.waitForConnectResult(3000) == WL_CONNECTED)
-            return true;
-    }
-    catch(...)
-    {
-        std::stringstream errorMessage;
-        errorMessage << SOURCE_LOCATION << "Failed to configure WiFi in Stationary Mode from \"" << staConfigURI << '"';
-        ExceptionTrace::trace(errorMessage.str());
-        throw;
-    }
-    return false;
-}
-
-
-bool Config::configureWifiAccesspoint()
-{
-    Logger[Level::Info] << "Configuring WiFi as accesspoint..." << std::endl;
-    JsonURI apConfigURI = Globals::WiFiConfigURI / "/ap"_json_pointer;
-    try
-    {
-        json apConfigJson = apConfigURI.deserialize();
-        const std::string& ssid = apConfigJson.at("ssid");
-        const std::string& password = apConfigJson.at("password");
-
-        return WiFi.softAP(ssid.c_str(), password.c_str());
-    }
-    catch(...)
-    {
-        std::stringstream errorMessage;
-        errorMessage << SOURCE_LOCATION << "Failed to configure WiFi as accesspoint from \"" << apConfigURI << '"';
-        ExceptionTrace::trace(errorMessage.str());
-        throw;
-    }
-}
-
-void Config::configureWiFi()
-{
-    Logger[Level::Info] << "Configuring WiFi..." << std::endl;
+    Logger[LogLevel::Info] << "Configuring WiFi..." << std::endl;
 
     try
     {
-        json wifiConfigJson = Globals::WiFiConfigURI.deserialize();
+        json configJson = configResource.deserialize();
 
         WiFi.mode(WiFiMode_t::WIFI_MODE_STA);
-        if(configureWiFiStationary())
+        if(configureWiFiStationary(configJson.at("sta")))
         {
-            Logger[Level::Info] 
+            Logger[LogLevel::Info] 
                 << "WiFi connected sucessfully to '"
-                << wifiConfigJson.at("sta").at("ssid")
+                << configJson.at("sta").at("ssid")
                 << "'. " 
                 << "IP: http://" << WiFi.localIP().toString().c_str()
                 << std::endl;
@@ -217,18 +264,18 @@ void Config::configureWiFi()
             return;
         }
 
-        Logger[Level::Info] 
+        Logger[LogLevel::Info] 
             << "Couldn't connect to" 
-            << wifiConfigJson.at("sta").at("ssid")
+            << configJson.at("sta").at("ssid")
             << ". Setting up Acesspoint..."
             << std::endl;
 
         WiFi.mode(WiFiMode_t::WIFI_MODE_AP);
-        if(configureWifiAccesspoint())
+        if(configureWifiAccesspoint(configJson.at("ap")))
         {
-            Logger[Level::Info] 
+            Logger[LogLevel::Info] 
                 << "WiFi configured sucessfully in Acesspoint Mode. Network Name: "
-                << wifiConfigJson.at("ap").at("ssid")
+                << configJson.at("ap").at("ssid")
                 << " IP: http://" << WiFi.softAPIP().toString().c_str()
                 << std::endl;
             return;
@@ -238,9 +285,7 @@ void Config::configureWiFi()
     }
     catch(...)
     {
-        std::stringstream errorMessage;
-        errorMessage << SOURCE_LOCATION << "Failed to configure WiFi from \"" << Globals::WiFiConfigURI << '"';
-        ExceptionTrace::trace(errorMessage.str());
+        ExceptionTrace::trace(SOURCE_LOCATION + "Failed to configure WiFi");
         throw;
     }
 }

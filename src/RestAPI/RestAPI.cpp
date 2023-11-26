@@ -2,8 +2,8 @@
 
 #include "RestAPI.h"
 #include "ExceptionTrace/ExceptionTrace.h"
-#include "Log/Log.h"
 
+using PM::RestAPI;
 
 RestAPI::RestAPI(HTTPServer& server, const std::string& baseURI) noexcept : 
     m_server(server),

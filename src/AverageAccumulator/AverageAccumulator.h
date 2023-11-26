@@ -1,25 +1,25 @@
-#ifndef AVERAGEACCUMULATOR_H
-#define AVERAGEACCUMULATOR_H
+#pragma once
 
-#include "JsonURI/JsonURI.h"
+#include "JsonResource/JsonResource.h"
 
-class AverageAccumulator
+namespace PM
 {
-public:
-    AverageAccumulator(const JsonURI& storageURI);
-    float getAverage();
-    size_t getCount();
-    float add(float value);
-    void reset();
-    void erase() const;
+    class AverageAccumulator
+    {
+    public:
+        AverageAccumulator(const JsonResource& storageResource);
+        float getAverage();
+        size_t getCount();
+        float add(float value);
+        void reset();
+        void erase() const;
 
-private:
-    void deserialize();
-    void serialize();
+    private:
+        void deserialize();
+        void serialize();
 
-    size_t m_count = 0;
-    float m_sum = 0.0f;
-    JsonURI m_storageURI;
-};
-
-#endif
+        size_t m_count = 0;
+        float m_sum = 0.0f;
+        JsonResource m_storageResource;
+    };
+}

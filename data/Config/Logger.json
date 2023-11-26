@@ -1,7 +1,19 @@
 {
-    "level": "Verbose",
-    "showLevel": true,
-    "fileMode": false,
     "baudRate": 115200,
-    "logFile": "/PowerMeterLog.log"
+    "streams": [
+        {
+            "type": "console",
+            "console": "stdout",
+            "showLevel": true,
+            "minLevel": "Error",
+            "maxLevel": "Verbose"
+        },
+        {
+            "type": "file",
+            "filePath": "/Log/log.txt",
+            "showLevel": true,
+            "minLevel": "Error",
+            "maxLevel": "Info"
+        }
+    ]
 }

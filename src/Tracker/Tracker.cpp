@@ -1,28 +1,29 @@
 #include "Tracker.h"
-#include "Log/Log.h"
+#include "SourceLocation/SourceLocation.h"
 #include "ExceptionTrace/ExceptionTrace.h"
 
 #include <math.h>
 #include <sstream>
 
+using PM::Tracker;
 
 Tracker::Tracker(
     const std::string& title,
     time_t duration_s,
     size_t sampleCount,
     const Clock& clock,
-    const JsonURI& dataURI,
-    const JsonURI& lastInputURI,
-    const JsonURI& lastSampleURI,
+    const JsonResource& dataResource,
+    const JsonResource& lastInputResource,
+    const JsonResource& lastSampleResource,
     const AverageAccumulator& accumulator
 ) noexcept : 
     m_title(title),
     m_duration_s(duration_s),
     m_sampleCount(sampleCount),
     m_clock(clock),
-    m_dataURI(dataURI),
-    m_lastInputURI(lastInputURI),
-    m_lastSampleURI(lastSampleURI),
+    m_dataResource(dataResource),
+    m_lastInputResource(lastInputResource),
+    m_lastSampleResource(lastSampleResource),
     m_accumulator(accumulator)
 {}
 
@@ -34,7 +35,7 @@ void Tracker::track(float value)
         if(!isfinite(value))
             value = 0.0f;
 
-        time_t lastInputTimestamp = getTimestamp(m_lastInputURI);
+        time_t lastInputTimestamp = getTimestamp(m_lastInputResource);
         time_t secondsSinceLastInput = m_clock.now() - lastInputTimestamp;
 
         if(secondsSinceLastInput <= 0)
@@ -42,11 +43,11 @@ void Tracker::track(float value)
         
         for(size_t i = 0; i < secondsSinceLastInput; i++)
         {
-            m_lastInputURI.serialize(m_clock.now());
+            m_lastInputResource.serialize(m_clock.now());
             m_accumulator.add(value);
         }
         
-        time_t lastSampleTimestamp = getTimestamp(m_lastSampleURI);
+        time_t lastSampleTimestamp = getTimestamp(m_lastSampleResource);
         uint32_t timesElapsed = (m_clock.now() - lastSampleTimestamp) / (m_duration_s / m_sampleCount);
 
         if(timesElapsed > 0)
@@ -78,7 +79,7 @@ json Tracker::getData() const
         data["duration_s"] = m_duration_s;
         try
         {
-            data["data"] = m_dataURI.deserialize();
+            data["data"] = m_dataResource.deserialize();
         }
         catch(...)
         {
@@ -101,7 +102,7 @@ void Tracker::setData(const json& data)
 {
     try
     {
-        m_dataURI.serialize(data.at("data"));
+        m_dataResource.serialize(data.at("data"));
     }
     catch(...)
     {
@@ -115,9 +116,9 @@ void Tracker::setData(const json& data)
 
 void Tracker::erase()
 {
-    m_dataURI.erase();
-    m_lastInputURI.erase();
-    m_lastSampleURI.erase();
+    m_dataResource.erase();
+    m_lastInputResource.erase();
+    m_lastSampleResource.erase();
     m_accumulator.erase();
 }
 
@@ -129,7 +130,7 @@ void Tracker::updateData(float value)
         json values;
         try
         {
-            values = m_dataURI.deserialize();
+            values = m_dataResource.deserialize();
         }                     
         catch(...)
         {
@@ -140,8 +141,8 @@ void Tracker::updateData(float value)
         if(values.size() > m_sampleCount)
             values.erase(values.begin());
         
-        m_dataURI.serialize(values);
-        m_lastSampleURI.serialize(m_clock.now());
+        m_dataResource.serialize(values);
+        m_lastSampleResource.serialize(m_clock.now());
     }
     catch(...)
     {
@@ -153,16 +154,16 @@ void Tracker::updateData(float value)
 }
 
 
-time_t Tracker::getTimestamp(const JsonURI& timestampURI) const
+time_t Tracker::getTimestamp(const JsonResource& timestampResource) const
 {
     try
     {
-        return timestampURI.deserialize();
+        return timestampResource.deserialize();
     }
     catch(...) 
     {
         ExceptionTrace::clear();
-        timestampURI.serialize(m_clock.now());
+        timestampResource.serialize(m_clock.now());
         return m_clock.now();
     }
 }

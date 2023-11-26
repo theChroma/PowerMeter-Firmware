@@ -2,10 +2,12 @@
 
 #include "HTTPServer.h"
 #include "ExceptionTrace/ExceptionTrace.h"
-#include "Log/Log.h"
+#include "SourceLocation/SourceLocation.h"
+#include "Logger/Logger.h"
 #include <sstream>
 #include <vector>
 
+using PM::HTTPServer;
 
 HTTPServer::HTTPServer(uint16_t port, const HTTP::HeaderMap& defaultHeaders) : 
     m_port(port),
@@ -92,7 +94,7 @@ void HTTPServer::registerURI(const std::string& uri, HTTP::Method method, const 
                 httpd_resp_set_type(request, "text/plain");
                 std::string errorMessage = ExceptionTrace::what();
                 httpd_resp_send(request, errorMessage.c_str(), errorMessage.length());
-                Logger[Level::Error] 
+                Logger[LogLevel::Error] 
                     << SOURCE_LOCATION << "An Exception occured, here is what happened:\n" 
                     << errorMessage << std::endl;
             }

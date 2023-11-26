@@ -4,8 +4,8 @@ info:
   version: "1.0.0"
   description: REST API für das PowerMeter, um Daten abzurufen und Geräteeinstellungen vorzunehmen
 servers:
+  - url: "http://192.168.178.178/api"
   - url: "http://192.168.178.153/api"
-  - url: "https://192.168.178.153/api"
 
 paths:
   /info: 
@@ -41,9 +41,9 @@ paths:
       responses:
         default:
           description: Wenn der Neustart erfolgreich war, wird keine Antwort zurückommen, da die Netzwerkverbindung durch den Neustart unterbrochen wird
-                
 
-  /power:
+
+  /measurements:
     get:
       tags:
         - Messen
@@ -58,7 +58,7 @@ paths:
         "500":
           $ref: "#/components/responses/error"
 
-  /config/measuring:
+  /measurements/config:
     get:
       tags:
         - Messen
@@ -134,7 +134,7 @@ paths:
           $ref: "#/components/responses/error"
 
   
-  /config/trackers:
+  /trackers/config:
     get:
       tags:
         - Tracker        
@@ -197,7 +197,7 @@ paths:
         "500":
           $ref: "#/components/responses/error"
   
-  /config/trackers/{id}:
+  /trackers/config/{id}:
     delete:
       tags:
         - Tracker        
@@ -264,7 +264,7 @@ paths:
         "500":
           $ref: "#/components/responses/error"
 
-  /config/relay:
+  /swith/config:
     get:
       tags:
         - Relais        
@@ -306,7 +306,7 @@ paths:
         "500":
           $ref: "#/components/responses/error"
 
-  /config/wifi:
+  /wifi/config:
     get:
       tags:
         - WiFi
@@ -368,7 +368,7 @@ paths:
         "500":
           $ref: "#/components/responses/error"
 
-  /config/logger:
+  /logger/config:
     get:
       tags:
         - Logger
@@ -458,22 +458,16 @@ components:
     measuringConfig:
       type: object
       properties:
-        pins:
-          type: object
-          properties:
-            voltage:
-              type: integer
-            current:
-              type: integer
-        calibration:
-          type: object
-          properties:
-            voltage:
-              type: number
-            current:
-              type: number
-            phase:
-              type: number
+        active:
+          type: string
+          oneOf:
+            - Emon
+            - Simulation
+        available:
+          type: array
+          items:
+            - 
+
     
     trackerConfig:
       type: object

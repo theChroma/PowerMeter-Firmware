@@ -1,19 +1,21 @@
-#ifndef CONFIG_H
-#define CONFIG_H
+#pragma once
 
-#include "JsonURI/JsonURI.h"
-#include "ACPowerMeter/ACPowerMeter.h"
+#include "JsonResource/JsonResource.h"
+#include "MeasuringUnit/MeasuringUnit.h"
+#include "Tracker/Tracker.h"
+#include "Clock/Clock.h"
+#include "Switch/Switch.h"
+#include <vector>
 
-namespace Config
-{
-    void configureLogger();
-    void configureACPowerMeter();
-    void configureRelay();
-    void configureTrackers();
-    bool configureWiFiStationary();
-    bool configureWifiAccesspoint();
-    void configureWiFi();
+namespace PM
+{  
+    namespace Config
+    {
+        void configureLogger(const JsonResource& configResource);
+        MeasuringUnit& configureMeasuringUnit(const JsonResource& configResource);
+        Clock& configureClock(const JsonResource& configResource);
+        Switch& configureSwitch(const JsonResource& configResource);
+        TrackerMap configureTrackers(const JsonResource& configResource, Clock& clock);
+        void configureWiFi(const JsonResource& configResource);
+    }
 }
-
-#endif
-

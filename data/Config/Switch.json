@@ -1,0 +1,11 @@
+{
+    "selected": "Relay",
+    "options": {
+        "Relay": {
+            "pin": 2,
+            "isNormallyOpen": true,
+            "isBistable": false
+        },
+        "None": {}
+    }
+}

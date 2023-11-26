@@ -1,6 +1,6 @@
 #include "HTTP.h"
 
-using namespace HTTP;
+using namespace PM::HTTP;
 
 Method::operator std::string() const
 {

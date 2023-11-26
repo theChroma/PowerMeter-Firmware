@@ -3,6 +3,7 @@
 #include <vector>
 #include <sstream>
 
+using namespace PM;
 
 namespace
 {
