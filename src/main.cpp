@@ -20,7 +20,7 @@ namespace
     {
         MeasuringUnit& measuringUnit;
         Measurement& measurement;
-        TrackerMap& trackers;
+        TrackerMap trackers;
     };
     
     const JsonResource loggerConfigResource("/Config/Logger.json");
@@ -73,10 +73,10 @@ void setup()
         server.start();
         static RestAPI api(server, "/api");
         
-        static MeasuringUnit& measuringUnit = Config::configureMeasuringUnit(measuringConfigResource);
-        static Switch& switchUnit = Config::configureSwitch(switchConfigResource);
-        static Clock& clock = Config::configureClock(clockConfigResource);
-        static TrackerMap trackers = Config::configureTrackers(trackerConfigResource, clock);
+        MeasuringUnit& measuringUnit = Config::configureMeasuringUnit(measuringConfigResource);
+        Switch& switchUnit = Config::configureSwitch(switchConfigResource);
+        Clock& clock = Config::configureClock(clockConfigResource);
+        TrackerMap trackers = Config::configureTrackers(trackerConfigResource, clock);
 
         Api::createSystemEndpoints(api);
         Api::createLoggerEndpoints(api, loggerConfigResource);
