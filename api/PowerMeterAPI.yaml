@@ -1,8 +1,8 @@
 openapi: "3.0.2"
 info:
   title: PowerMeter API
-  version: "1.0.0"
-  description: REST API für das PowerMeter, um Daten abzurufen und Geräteeinstellungen vorzunehmen
+  version: "v1"
+  description: REST API for the power meter to read measuring data and configure the device.
 servers:
   - url: "http://192.168.178.178/api"
   - url: "http://192.168.178.153/api"
@@ -12,7 +12,7 @@ paths:
     get:
       tags:
         - System
-      summary: Systeminformationen lesen
+      summary: Read system information
       responses:
         "200":
           description: Objekt mit Informationen über das System
@@ -37,36 +37,36 @@ paths:
     post:
       tags:
         - System
-      summary: Neustart ausführen
+      summary: Reboot the device
       responses:
-        default:
-          description: Wenn der Neustart erfolgreich war, wird keine Antwort zurückommen, da die Netzwerkverbindung durch den Neustart unterbrochen wird
+        "200":
+          description: The device will be rebooted now
+                
 
-
-  /measurements:
+  /measure:
     get:
       tags:
-        - Messen
-      summary: Aktuelle Messwerte lesen
+        - Measuring
+      summary: Read out current measurement values
       responses:
         "200":            
-          description: Objekt mit gemessenen Werten
+          description: Current measurement values
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/power"
+                $ref: "#/components/schemas/measurement"
         "500":
           $ref: "#/components/responses/error"
 
-  /measurements/config:
+  /measuring/config:
     get:
       tags:
-        - Messen
+        - Measuring
         
-      summary: Konfiguration für Messungen lesen
+      summary:  Read measuring configuration
       responses:
         "200":
-          description: Mess-Konfigurationsobjekt bestehend aus Pins und Kalibrierungswerten
+          description: Measuring configuration
           content:
             application/json:
               schema:
@@ -76,24 +76,25 @@ paths:
                 
     patch:
       tags:
-        - Messen        
-      summary: Konfiguration für Messungen ändern
+        - Measuring        
+      summary: Change measuring configuration
       requestBody:
-        description: Objekt mit der neuen Konfiguration für Messungen. Soll ein Wert nicht geändert werden, kann er weggelassen werden.
+        description: Merge patch to apply to the measuring configuration
         required: true
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/measuringConfig"
             example:
-              pins:
-                current: 32
-              calibration:
-                phase: -12.3
+              options:
+                Ac:
+                  calibration: 
+                    voltage: 132.34
+                    current: 11.3
               
       responses:
         "200":
-          description: "Mess-Konfigurationsobjekt, nach vorgenommenen Änderungen"
+          description: Measuring configuration after applied changes
           content:
             application/json:
               schema:
@@ -105,10 +106,10 @@ paths:
     get:
       tags:
         - Tracker 
-      summary: Trackerdaten lesen
+      summary: Read data of all trackers
       responses:
         "200":
-          description: Objekt, das alle Tracker unter der ID enthält. Die ID wird beim hizufügen eines Trackes automatisch erzeugt, und setzt sich aus "duration_s" und "sampleCount" zusammen.
+          description: Tracker data by Tracker ID
           content:
             application/json:
               schema:
@@ -133,15 +134,15 @@ paths:
         "500":
           $ref: "#/components/responses/error"
 
-  
+
   /trackers/config:
     get:
       tags:
         - Tracker        
-      summary: Trackerkonfiguration lesen
+      summary: Read the configuration of all trackers
       responses:
         "200":
-          description: Objekt, das alle Trackerkonfigurationen unter der ID enthält. Die ID wird beim hizufügen eines Trackes automatisch erzeugt, und setzt sich aus "duration_s" und "sampleCount" zusammen.
+          description: Configurations for all trackers by Tracker ID
           content:
             application/json:
               schema:
@@ -161,22 +162,22 @@ paths:
     post:
       tags:
         - Tracker
-      summary: Neuen Tracker hinzfügen
+      summary: Add a new tracker
       requestBody:
-        description: Objekt das einen neuen Tracker enthält, der hinzugefügt werden soll
+        description: Configuration for the new tracker
         required: true
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/trackerConfig"
             example:
-              title: "New Tracker"
+              title: New Tracker
               duration_s: 500
               sampleCount: 10
              
       responses:
         "200":
-          description: Objekt mit allen Trackerkonfigurationen unter der ID inkl. dem neu hinzugefügtem Tracker
+          description: Configurations for all trackers by Tracker ID after adding the new tracker
           content:
             application/json:
               schema:
@@ -200,8 +201,8 @@ paths:
   /trackers/config/{id}:
     delete:
       tags:
-        - Tracker        
-      summary: Tracker nach ID löschen
+        - Tracker
+      summary: Delete a tracker by Tracker ID
       parameters:
         - name: id
           in: path
@@ -209,10 +210,10 @@ paths:
           schema:
             type: string
             pattern: ^\d+_\d+$
-          description: Tracker ID. Die ID wird beim hizufügen eines Trackes automatisch erzeugt, und setzt sich aus "duration_s" und "sampleCount" zusammen.
+          description: Tracker ID of of the tracker to be deleted
       responses:
         "200": 
-          description: Objekt mit allen Trackerkonfigurationen unter der ID, nachdem der gewünschte Tracker gelöscht wurde.
+          description: Configurations for all trackers by Tracker ID after deleting the tracker
           content:
             application/json:
               schema:
@@ -229,26 +230,27 @@ paths:
         "500":
           $ref: "#/components/responses/error"
   
-  /relay:
+  /switch:
     get:
       tags:
-        - Relais
-      summary: Zustand des Relais lesen
+        - Switch
+      summary: Read the state of the switch
       responses:
         "200":
-          description: Der Zustand des Relais als boolscher Wert
+          description: The state of the switch, null if no Switch is configured
           content:
             application/json:
               schema:
                 type: boolean
+                nullable: true
         "500":
           $ref: "#/components/responses/error"
     patch:
       tags:
-        - Relais
-      summary: Zustand des Relais ändern
+        - Switch
+      summary: Change the state of the switch
       requestBody:
-        description: Neuer Zustand den das Relais haben soll
+        description: Desired state of the switch
         required: true
         content:
           application/json:
@@ -256,7 +258,7 @@ paths:
               type: boolean
       responses:
         "200":
-          description: Der geänderte Zustand des Relais als boolscher Wert
+          description: The state of the switch after applied changes
           content:
             application/json:
               schema:
@@ -264,45 +266,43 @@ paths:
         "500":
           $ref: "#/components/responses/error"
 
-  /swith/config:
+  /switch/config:
     get:
       tags:
-        - Relais        
-      summary: Konfiguration für das Relais lesen
+        - Switch        
+      summary: Read the switch configuration
       responses:
         "200":
-          description: Objekt mit der Konfiguration für das Relais.
+          description: Switch configuration
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/relayConfig"
-              example:
-                pin: 2
+                $ref: "#/components/schemas/switchConfig"
         "500":
           $ref: "#/components/responses/error"
 
     patch:
       tags:
-        - Relais        
-      summary: Konfiguration für das Relais ändern
+        - Switch
+      summary: Change the switch configuration
       requestBody:
-        description: Objekt mit der neuen Konfiguration für das Relais.
+        description: Merge patch to apply to the switch configuration
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/relayConfig"
+              $ref: "#/components/schemas/switchConfig"
             example:
-              pin: 4
+              options:
+                Relay:
+                  isNormallyOpen: false
       responses:
         "200":
-          description: Objekt mit der neuen Konfiguration für das Relais, nach vorgenommenen Änderungen.
+          description: Switch configuration after applied changes
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/relayConfig"
-              example:
-                pin: 4
+                $ref: "#/components/schemas/switchConfig"
         "500":
           $ref: "#/components/responses/error"
 
@@ -310,7 +310,6 @@ paths:
     get:
       tags:
         - WiFi
-        
       summary: WiFi Konfiguration lesen
       responses:
         "200":
@@ -372,23 +371,14 @@ paths:
     get:
       tags:
         - Logger
-      summary: Loggerkonfiguration lesen
+      summary: Read the logger configuration
       responses:
         "200":
-          description: Array mit der Loggerkonfiguration.
+          description: Logger configuration
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/loggerConfig"
-              example:
-                - 
-                  filePath: "/PowerMeterLog.log"
-                  level: Warning
-                  showLevel: true
-                - 
-                  baudRate: 115200
-                  level: Verbose
-                  showLevel: true
         "500":
           $ref: "#/components/responses/error"
 
@@ -439,7 +429,18 @@ components:
             used_B:
               type: integer
 
-    power:
+    measurement:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - Ac
+        measurement:
+          oneOf:
+            - $ref: "#/components/schemas/acMeasurement"
+
+    acMeasurement:
       type: object
       properties:
         activePower_W:
@@ -460,14 +461,56 @@ components:
       properties:
         active:
           type: string
-          oneOf:
-            - Emon
+          enum:
+            - Ac
             - Simulation
-        available:
-          type: array
-          items:
-            - 
+        options:
+          type: object
+          properties:
+            Ac:
+              $ref: "#/components/schemas/acMeasuringConfig"
+            Simulation:
+              $ref: "#/components/schemas/simulationMeasuringConfig"
 
+    acMeasuringConfig:
+      type: object
+      properties:
+        pins:
+          type: object
+          properties:
+            voltage:
+              type: integer
+            current:
+              type: integer
+        calibration:
+          type: object
+          properties:
+            voltage:
+              type: number
+            current:
+              type: number
+            phase:
+              type: number  
+
+    simulationMeasuringConfig:
+      type: object
+      properties:
+        measuringRunTime_ms:
+          type: integer
+        voltage:
+          $ref: "#/components/schemas/simulationValueConfig"
+        current:
+          $ref: "#/components/schemas/simulationValueConfig"
+        powerFactor:
+          $ref: "#/components/schemas/simulationValueConfig"
+
+    simulationValueConfig:
+      type: object
+      properties:
+        min:
+          type: number
+        max:
+          type: number
     
     trackerConfig:
       type: object
@@ -498,11 +541,29 @@ components:
       additionalProperties:
         $ref: "#/components/schemas/tracker"
 
+    switchConfig:
+      type: object
+      properties:
+        active:
+          type: string
+          enum:
+            - None
+            - Relay
+        options:
+          type: object
+          properties:
+            None:
+              type: object
+            Relay:
+              $ref: "#/components/schemas/relayConfig"
+
     relayConfig:
       type: object
       properties:
         pin:
           type: integer
+        isNormallyOpen:
+          type: boolean
 
     wifiConfig:
       type: object
@@ -541,11 +602,16 @@ components:
       pattern: (\b25[0-5]|\b2[0-4][0-9]|\b[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}
 
     loggerConfig:
-      type: array
-      items:
-        oneOf:
-          - $ref: "#/components/schemas/fileLoggerConfig"
-          - $ref: "#/components/schemas/serialLoggerConfig"
+      type: object
+      properties:
+        baudRate:
+          type: integer
+        streams:
+          type: array
+          items:
+            oneOf:
+              - $ref: "#/components/schemas/fileLoggerConfig"
+              - $ref: "#/components/schemas/consoleLoggerConfig"
 
     fileLoggerConfig:
       type: object
@@ -557,7 +623,7 @@ components:
         showLevel:
           type: boolean
 
-    serialLoggerConfig:
+    consoleLoggerConfig:
       type: object
       properties:
         baudRate:
@@ -579,7 +645,7 @@ components:
 
   responses:
     error:
-      description: "String mit der Fehlerbeschreibung. Antwort wenn ein Fehler auf dem PowerMeter (Server) auftritt"
+      description: "An error ocurred"
       content:
         application/json:
           schema:

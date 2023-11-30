@@ -3,8 +3,7 @@
     "options": {
         "Relay": {
             "pin": 2,
-            "isNormallyOpen": true,
-            "isBistable": false
+            "isNormallyOpen": true
         },
         "None": {}
     }
