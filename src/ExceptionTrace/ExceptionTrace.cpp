@@ -1,13 +1,34 @@
 #include "ExceptionTrace.h"
-
-#include <vector>
 #include <sstream>
+#include <algorithm>
 
 using namespace PM;
 
 namespace
 {
-    std::vector<std::string> traces;
+    ExceptionTrace::Traces traces;
+
+    void traceCurrent(ExceptionTrace::Traces& traces)
+    {
+        try
+        {
+            std::exception_ptr currentException = std::current_exception();
+            if(currentException)
+                std::rethrow_exception(currentException);
+        }
+        catch(const std::exception& exeception)
+        {
+            traces.push_front(exeception.what());
+        }
+        catch(const char* exeception)
+        {
+            traces.push_front(exeception);
+        }
+        catch(...)
+        {
+            traces.push_front("Unexpected Exception");
+        }
+    }
 }
 
 
@@ -23,37 +44,25 @@ void ExceptionTrace::clear() noexcept
 }
 
 
-std::string ExceptionTrace::what(size_t indentLevel, char indentChar)
+ExceptionTrace::Traces ExceptionTrace::get(bool clearTraces) noexcept
 {
-    std::stringstream what;
+    Traces tracesCopy = traces;
+    traceCurrent(tracesCopy);
+    if (clearTraces)
+        ExceptionTrace::clear();
+    std::reverse(tracesCopy.begin(), tracesCopy.end());
+    return tracesCopy;
+}
 
-    for(size_t i = 0; i < traces.size(); i++)
-        what << std::string(indentLevel * i, indentChar) << traces.at(traces.size() - i - 1) << '\n';
-    
-    try
-    {
-        std::exception_ptr currentException = std::current_exception();
-        if(currentException)
-            std::rethrow_exception(currentException);
-    }
-    catch(const std::exception& e)
-    {
-        what << std::string(indentLevel * traces.size(), indentChar) << e.what() << '\n';
-    }
-    catch(int e)
-    {
-        what << std::string(indentLevel * traces.size(), indentChar) << e << '\n';
-    }
-    catch(const char* e)
-    {
-        what << std::string(indentLevel * traces.size(), indentChar) << e << '\n';
-    }
-    catch(...)
-    {
-        what << std::string(indentLevel * traces.size(), indentChar) << "Unexpected Exception" << '\n';
-    }
-    
-    traces.clear();
-        
+
+std::string ExceptionTrace::what(bool clearTraces, size_t indentLevel, char indentChar) noexcept
+{
+    Traces tracesCopy = traces;
+    traceCurrent(tracesCopy);
+    std::stringstream what;
+    for(size_t i = 0; i < tracesCopy.size(); i++)
+        what << std::string(indentLevel * i, indentChar) << tracesCopy.at(tracesCopy.size() - i - 1) << "\r\n";
+    if (clearTraces)
+        ExceptionTrace::clear();
     return what.str();
 }

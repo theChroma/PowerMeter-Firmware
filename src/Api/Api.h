@@ -11,17 +11,22 @@ namespace PM
     namespace Api
     {
         void createSystemEndpoints(RestAPI& api);
-        void createLoggerEndpoints(RestAPI& api, const JsonResource& configResource);
+        void createLoggerEndpoints(RestAPI &api, const JsonResource &configResource, AsyncWebServer &server);
         void createMeasuringEndpoints(
             RestAPI& api,
             const JsonResource& configResource,
-            MeasuringUnit& measuringUnit,
-            Measurement& measurement
+            std::reference_wrapper<MeasuringUnit>& measuringUnit,
+            std::reference_wrapper<Measurement>& measurement
         );
         void createSwitchEndpoints(
             RestAPI& api,
             const JsonResource& configResource,
-            Switch& switchUnit
+            std::reference_wrapper<Switch>& switchUnit
+        );
+        void createClockEndpoints(
+            RestAPI& api,
+            const JsonResource& configResource,
+            std::reference_wrapper<Clock>& clock
         );
         void createTrackerEndpoints(
             RestAPI& api,

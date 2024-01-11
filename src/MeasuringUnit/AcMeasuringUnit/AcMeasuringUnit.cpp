@@ -25,11 +25,11 @@ AcMeasuringUnit::AcMeasuringUnit(const json& configJson)
             configJson.at("/calibration/current"_json_pointer),
             configJson.at("/calibration/phase"_json_pointer)
         );
-        Logger[LogLevel::Info] << "Configured emon measuring unit sucessfully." << std::endl;
+        Logger[LogLevel::Info] << "Configured AC measuring unit sucessfully." << std::endl;
     }
     catch (...)
     {
-        ExceptionTrace::trace(SOURCE_LOCATION + "Failed to configure Emon measuring unit");
+        ExceptionTrace::trace(SOURCE_LOCATION + "Failed to configure AC measuring unit");
         throw;
     }
 }

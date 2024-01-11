@@ -12,6 +12,4 @@ namespace PM
         virtual Measurement& measure() noexcept = 0;
         inline virtual ~MeasuringUnit() noexcept {};
     };
-
-    using MeasuringUnitMap = std::unordered_map<std::string, MeasuringUnit&>;
 }

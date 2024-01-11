@@ -1,19 +1,14 @@
 {
-    "baudRate": 115200,
-    "streams": [
-        {
-            "type": "console",
-            "console": "stdout",
-            "showLevel": true,
-            "minLevel": "Error",
-            "maxLevel": "Verbose"
-        },
-        {
-            "type": "file",
-            "filePath": "/Log/log.txt",
-            "showLevel": true,
-            "minLevel": "Error",
-            "maxLevel": "Info"
-        }
-    ]
+    "file": {
+        "filePath": "/Log/log.log",
+        "showLevel": true,
+        "minLevel": "Error",
+        "maxLevel": "Verbose"
+    },
+    "console": {
+        "baudRate": 115200,
+        "showLevel": true,
+        "minLevel": "Error",
+        "maxLevel": "Verbose"
+    }
 }

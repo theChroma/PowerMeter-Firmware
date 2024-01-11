@@ -1,10 +1,10 @@
 #include "LogStream.h"
+#include "ExceptionTrace/ExceptionTrace.h"
+#include "SourceLocation/SourceLocation.h"
 #include <algorithm>
-#include <exception>
 #include <fstream>
 
-
-using PM::LogStream;
+using namespace PM;
 
 LogStream::LogStream(LogLevel minLevel, LogLevel maxLevel, std::ostream& stream, bool showLevel) noexcept :
     m_minLevel(minLevel),

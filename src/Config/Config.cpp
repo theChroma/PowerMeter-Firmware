@@ -12,6 +12,7 @@
 #include "ExceptionTrace/ExceptionTrace.h"
 #include <Arduino.h>
 #include <WiFi.h>
+#include <LittleFS.h>
 #include <ESPmDNS.h>
 #include <tl/optional.hpp>
 #include <fstream>
@@ -23,36 +24,12 @@ using tl::optional;
 
 namespace
 {
-    std::ostream& getConsoleByName(const std::string& name)
-    {
-        std::unordered_map<std::string, std::ostream&> consoles = {
-            {"stdout", std::cout},
-            {"stderr", std::cerr},
-            {"stdlog", std::clog},
-        };
-        return consoles.at(name);
-    }
-
-    LogStream configureLogStream(const json& configJson)
-    {
-        LogLevel minLevel = configJson.at("minLevel").get<std::string>();
-        LogLevel maxLevel = configJson.at("maxLevel").get<std::string>();
-        bool showLevel = configJson.at("showLevel");
-        if (configJson.at("type") == "file")
-        {
-            static std::vector<std::ofstream> logFiles;
-            logFiles.emplace_back(configJson.at("filePath"));
-            return LogStream(minLevel, maxLevel, logFiles.back(), showLevel);
-        }
-        return LogStream(minLevel, maxLevel, getConsoleByName(configJson.at("console")), showLevel);
-    }
-
     template<typename T>
     using ImplementaitonMap = std::unordered_map<std::string, std::function<T&(const json&)>>; 
 
 
     template<typename T>
-    T& configureImplementation(const json& configJson)
+    std::reference_wrapper<T> configureImplementation(const json& configJson)
     {
         static optional<T> implementation;
         implementation.emplace(configJson);
@@ -61,11 +38,19 @@ namespace
 
 
     template<typename T>
-    T& getSelectedImplementation(const JsonResource& configResource, const ImplementaitonMap<T>& implementations)
+    std::reference_wrapper<T> getSelectedImplementation(const JsonResource& configResource, const ImplementaitonMap<T>& implementations)
     {
-        json configJson = configResource.deserialize();
-        std::string key = configJson.at("selected");
-        return implementations.at(key)(configJson.at("options").at(key));
+        try
+        {
+            json configJson = configResource.deserialize();
+            std::string key = configJson.at("selected");
+            return implementations.at(key)(configJson.at("options").at(key));
+        }
+        catch (...)
+        {
+            ExceptionTrace::trace(SOURCE_LOCATION + "Failed to get selected Implementation");
+            throw;
+        }
     }
 
 
@@ -120,24 +105,48 @@ namespace
             throw;
         }
     }
+
+    LogStream configureLogStream(const json& configJson, std::ostream& stream)
+    {
+        LogLevel minLevel = configJson.at("minLevel").get<std::string>();
+        LogLevel maxLevel = configJson.at("maxLevel").get<std::string>();
+        bool showLevel = configJson.at("showLevel");
+        return LogStream(minLevel, maxLevel, stream, showLevel);
+    }
 }
 
-void Config::configureLogger(const JsonResource& configResource)
+void Config::configureLogger(const JsonResource& configResource, AsyncWebServer& server)
 {
     try
     {
         Logger[LogLevel::Info] << "Configuring Logger..." << std::endl;
 
-        json configJson = configResource.deserialize();
-        Serial.begin(configJson.at("baudRate"));
-        std::vector<LogStream> streams;
-        for (const auto& streamJson : configJson.at("streams"))
+        try
         {
-            streams.push_back(configureLogStream(streamJson));    
-        }
-        Logger = streams;
+            json configJson = configResource.deserialize();
+            Serial.begin(configJson.at("/console/baudRate"_json_pointer));
 
-        Logger[LogLevel::Info] << "Logger configured sucessfully." << std::endl;
+            static std::ofstream logFile;
+            std::string logFilePath = configJson.at("/file/filePath"_json_pointer);
+            logFile.open(logFilePath);
+            server.on("/log", HTTP_GET, [logFilePath](AsyncWebServerRequest* request){
+                logFile.close();
+                request->send(LittleFS, logFilePath.c_str(), "text/plain");
+                logFile.open(logFilePath, std::ios::app);
+            });
+
+            std::vector<LogStream> logStreams = {
+                configureLogStream(configJson.at("console"), std::cout),
+                configureLogStream(configJson.at("file"), logFile),
+            };
+            Logger = logStreams;
+            Logger[LogLevel::Info] << "Logger configured sucessfully." << std::endl;
+        }
+        catch(...)
+        {
+            ExceptionTrace::trace(SOURCE_LOCATION + "Failed to configure Logger");
+            throw;
+        }
     }
     catch (...)
     {
@@ -147,7 +156,7 @@ void Config::configureLogger(const JsonResource& configResource)
 }
 
 
-MeasuringUnit& Config::configureMeasuringUnit(const JsonResource& configResource)
+std::reference_wrapper<MeasuringUnit> Config::configureMeasuringUnit(const JsonResource& configResource)
 {
     Logger[LogLevel::Info] << "Configuring measuring unit..." << std::endl;
     try
@@ -166,7 +175,7 @@ MeasuringUnit& Config::configureMeasuringUnit(const JsonResource& configResource
 }
 
 
-Clock& Config::configureClock(const JsonResource& configResource)
+std::reference_wrapper<Clock> Config::configureClock(const JsonResource& configResource)
 {
     Logger[LogLevel::Info] << "Configuring clock..." << std::endl;
     try
@@ -185,7 +194,7 @@ Clock& Config::configureClock(const JsonResource& configResource)
 }
 
 
-Switch& Config::configureSwitch(const JsonResource& configResource)
+std::reference_wrapper<Switch> Config::configureSwitch(const JsonResource& configResource)
 {
     Logger[LogLevel::Info] << "Configuring switch..." << std::endl;
     try
@@ -194,7 +203,9 @@ Switch& Config::configureSwitch(const JsonResource& configResource)
             {"None", configureImplementation<NoSwitch>}, 
             {"Relay", configureImplementation<Relay>}, 
         };
-        return getSelectedImplementation<Switch>(configResource, switches);
+        Switch& switchUnit = getSelectedImplementation<Switch>(configResource, switches);
+        Logger[LogLevel::Debug] << "Address of Switch: " << &switchUnit << std::endl;
+        return switchUnit;
     }
     catch (...)
     {
@@ -204,7 +215,7 @@ Switch& Config::configureSwitch(const JsonResource& configResource)
 }
 
 
-TrackerMap Config::configureTrackers(const JsonResource& configResource, Clock& clock)
+TrackerMap Config::configureTrackers(const JsonResource& configResource, std::reference_wrapper<Clock> clock)
 {
     Logger[LogLevel::Info] << "Configuring trackers..." << std::endl;
     TrackerMap trackers;

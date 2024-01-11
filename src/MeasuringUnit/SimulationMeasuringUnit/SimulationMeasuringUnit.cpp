@@ -1,3 +1,5 @@
+#ifdef ESP32
+
 #include "SimulationMeasuringUnit.h"
 #include "Measurement/AcMeasurement/AcMeasurement.h"
 #include "Logger/Logger.h"
@@ -51,3 +53,5 @@ Measurement& SimulationMeasuringUnit::measure() noexcept
     measurement.emplace(simulatedVoltage, simulatedCurrent, simulatedActivePower);
     return measurement.value();
 }
+
+#endif

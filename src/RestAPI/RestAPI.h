@@ -1,13 +1,19 @@
 #pragma once
 
-#include "HTTPServer/HTTPServer.h"
-
+#include "Version/Version.h"
 #include <json.hpp>
 #include <functional>
 #include <string>
+#include <ESPAsyncWebServer.h>
 
 namespace PM
 {
+    namespace Http
+    {
+        using Header = std::pair<std::string, std::string>;
+        using HeaderMap = std::unordered_map<std::string, std::string>;
+    }
+
     class RestAPI
     {
     public:
@@ -15,31 +21,27 @@ namespace PM
         {
             JsonResponse(
                 const json& data = nullptr,
-                HTTP::StatusCode status = HTTP::StatusCode::OK,
-                const HTTP::HeaderMap& headers = {}
+                uint16_t statusCode = 200,
+                const Http::HeaderMap& headers = {}
             ) :
                 data(data),
-                status(status),
+                statusCode(statusCode),
                 headers(headers)
             {}
             json data;
-            HTTP::StatusCode status;
-            HTTP::HeaderMap headers;
+            uint16_t statusCode;
+            Http::HeaderMap headers;
         };
 
-        using JsonHandler = std::function<JsonResponse(const json&)>;
-        using HeaderList = std::vector<HTTP::Header>;
+        using JsonHandler = std::function<JsonResponse(const json&, const Version&)>;
 
-        RestAPI(
-            HTTPServer& server, 
-            const std::string& baseURI = ""
-        ) noexcept;
-
-        void registerURI(const std::string& uri, HTTP::Method method, const JsonHandler& handlerCallback) noexcept;
+        RestAPI(AsyncWebServer& server, const Version& apiVersion, const std::string& baseUri = "") noexcept;
+        void handle(const std::string& uri, WebRequestMethod method, const JsonHandler& handler) noexcept;
 
     private:
-        HTTPServer& m_server;
-        std::string m_baseURI;
+        AsyncWebServer& m_server;
+        Version m_apiVersion;
+        std::string m_baseUri;
     };
 }
 

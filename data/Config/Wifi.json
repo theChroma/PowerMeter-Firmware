@@ -1,7 +1,7 @@
 {
     "sta": {
-        "ssid": "WLAN-T-Com",
-        "password": "GxvuzR8znV",
+        "ssid": "",
+        "password": "",
         "staticIP": "0.0.0.0",
         "gateway": "0.0.0.0",
         "subnet": "0.0.0.0"

@@ -1,0 +1,725 @@
+openapi: "3.0.2"
+info:
+  title: PowerMeter API
+  version: "v0.0.0"
+  description: REST API for the power meter to read measuring data and configure the device.
+servers:
+  - url: "http://192.168.178.187/api/v0.0.0"
+
+paths:
+  /info: 
+    get:
+      tags:
+        - System
+      summary: Read system information
+      responses:
+        "200":
+          description: Objekt mit Informationen über das System
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/info"
+              example:
+                mac: 0
+                firware: "0.0.0"
+                uptime_ms: 1235
+                filesystem:
+                  total_B: 8000000
+                  used_B: 1000000
+                heap:
+                  total_B: 150000
+                  used_B: 30000
+        "500":
+          $ref: "#/components/responses/error"
+
+  /reboot:
+    post:
+      tags:
+        - System
+      summary: Reboot the device
+      responses:
+        "204":
+          description: The device will be rebooted now
+                
+
+  /measure:
+    get:
+      tags:
+        - Measuring
+      summary: Read out current measurement values
+      responses:
+        "200":            
+          description: Current measurement values
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/measurement"
+        "500":
+          $ref: "#/components/responses/error"
+
+  /measuring/config:
+    get:
+      tags:
+        - Measuring
+        
+      summary:  Read measuring configuration
+      responses:
+        "200":
+          description: Measuring configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/measuringConfig"
+        "500":
+          $ref: "#/components/responses/error"
+                
+    patch:
+      tags:
+        - Measuring        
+      summary: Change measuring configuration
+      requestBody:
+        description: Merge patch to apply to the measuring configuration
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/measuringConfig"
+            example:
+              options:
+                Ac:
+                  calibration: 
+                    voltage: 132.34
+                    current: 11.3
+              
+      responses:
+        "200":
+          description: Measuring configuration after applied changes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/measuringConfig"
+        "500":
+          $ref: "#/components/responses/error"
+
+  /trackers:
+    get:
+      tags:
+        - Tracker 
+      summary: Read data of all trackers
+      responses:
+        "200":
+          description: Tracker data by Tracker ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/trackers"
+              example:
+                "3600_60":
+                  title: Last 60 Minutes
+                  duration_s: 3600
+                  sampleCount: 60
+                  data: 
+                    - 1233.2
+                    - 233.6
+                    - 96.34
+                "86400_24":
+                  title: Last 24 Hours
+                  duration_s: 86400
+                  sampleCount: 24
+                  data: 
+                    - 1233.2
+                    - 233.6
+                    - 96.34
+        "500":
+          $ref: "#/components/responses/error"
+
+
+  /trackers/config:
+    get:
+      tags:
+        - Tracker        
+      summary: Read the configuration of all trackers
+      responses:
+        "200":
+          description: Configurations for all trackers by Tracker ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/trackerConfigs"
+              example:
+                "3600_60":
+                  title: Last 60 Minutes
+                  duration_s: 3600
+                  sampleCount: 60
+                "86400_24":
+                  title: Last 24 Hours
+                  duration_s: 86400
+                  sampleCount: 24
+        "500":
+          $ref: "#/components/responses/error"
+
+    post:
+      tags:
+        - Tracker
+      summary: Add a new tracker
+      requestBody:
+        description: Configuration for the new tracker
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/trackerConfig"
+            example:
+              title: New Tracker
+              duration_s: 500
+              sampleCount: 10
+             
+      responses:
+        "201":
+          description: Configurations for all trackers by Tracker ID after adding the new tracker
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/trackerConfigs"
+              example:
+                "3600_60":
+                  title: Last 60 Minutes
+                  duration_s: 3600
+                  sampleCount: 60
+                "86400_24":
+                  title: Last 24 Hours
+                  duration_s: 86400
+                  sampleCount: 24
+                "500_10":
+                  title: "New Tracker"
+                  duration_s: 500
+                  sampleCount: 10
+        "500":
+          $ref: "#/components/responses/error"
+  
+  /trackers/config/{id}:
+    delete:
+      tags:
+        - Tracker
+      summary: Delete a tracker by Tracker ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/trackerId"
+          description: Tracker ID of of the tracker to be deleted
+      responses:
+        "200": 
+          description: Configurations for all trackers by Tracker ID after deleting the tracker
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/trackerConfigs"
+              example:
+                "3600_60":
+                  title: Last 60 Minutes
+                  duration_s: 3600
+                  sampleCount: 60
+                "86400_24":
+                  title: Last 24 Hours
+                  duration_s: 86400
+                  sampleCount: 24
+        "500":
+          $ref: "#/components/responses/error"
+  
+  /switch:
+    get:
+      tags:
+        - Switch
+      summary: Read the state of the switch
+      responses:
+        "200":
+          description: The state of the switch, null if no Switch is configured
+          content:
+            application/json:
+              schema:
+                type: boolean
+                nullable: true
+        "500":
+          $ref: "#/components/responses/error"
+    patch:
+      tags:
+        - Switch
+      summary: Change the state of the switch
+      requestBody:
+        description: Desired state of the switch
+        required: true
+        content:
+          application/json:
+            schema:
+              type: boolean
+      responses:
+        "200":
+          description: The state of the switch after applied changes
+          content:
+            application/json:
+              schema:
+                type:  boolean
+        "500":
+          $ref: "#/components/responses/error"
+
+  /switch/config:
+    get:
+      tags:
+        - Switch        
+      summary: Read the switch configuration
+      responses:
+        "200":
+          description: Switch configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/switchConfig"
+        "500":
+          $ref: "#/components/responses/error"
+
+    patch:
+      tags:
+        - Switch
+      summary: Change the switch configuration
+      requestBody:
+        description: Merge patch to apply to the switch configuration
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/switchConfig"
+            example:
+              options:
+                Relay:
+                  isNormallyOpen: false
+      responses:
+        "200":
+          description: Switch configuration after applied changes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/switchConfig"
+        "500":
+          $ref: "#/components/responses/error"
+
+  /clock/config:
+    get:
+      tags:
+        - Clock        
+      summary: Read the clock configuration
+      responses:
+        "200":
+          description: Clock configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/clockConfig"
+        "500":
+          $ref: "#/components/responses/error"
+
+    patch:
+      tags:
+        - Clock
+      summary: Change the clock configuration
+      requestBody:
+        description: Merge patch to apply to the clock configuration
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/clockConfig"
+            example:
+              options:
+                Simulation:
+                  fastForward: 10
+      responses:
+        "200":
+          description: Clock configuration after applied changes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/clockConfig"
+        "500":
+          $ref: "#/components/responses/error"
+
+  /wifi/config:
+    get:
+      tags:
+        - WiFi
+      summary: WiFi Konfiguration lesen
+      responses:
+        "200":
+          description: Objekt mit der WiFi-Konfiguration.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/wifiConfig"
+              example:
+                mode: Stationary
+                sta:
+                  ip: "192.168.1.42"
+                  ssid: MyWiFiNetwork
+                  staticIP: "0.0.0.0"
+                  gateway: "0.0.0.0"
+                  subnet: "0.0.0.0"
+                ap:
+                  ip: "192.168.4.1"
+                  ssid: "PowerMeter AP"
+        "500":
+          $ref: "#/components/responses/error"
+    patch:
+      tags:
+        - WiFi        
+      summary: WiFi-Konfiguration ändern
+      requestBody:
+        description: Objekt mit der neuen WiFi-Konfiguration. Soll ein Wert nicht geändert werden, kann er weggelassen werden.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/wifiConfig"
+            example:
+              sta:
+                staticIP: "192.168.1.45"
+                gateway: "192.168.1.1"
+                subnet: "255.255.255.0"
+      responses:
+        "200":
+          description: Objekt mit der neuen WiFi-Konfiguration, nach vorgenommenen Änderungen. 
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/wifiConfig"
+              example:
+                mode: Stationary
+                sta:
+                  ssid: "MyWifiNetwork"
+                  ip: "192.168.1.45"
+                  staticIP: "192.168.1.45"
+                  gateway: "192.168.1.1"
+                  subnet: "255.255.255.0"
+                ap:
+                  ip: "192.168.4.1"
+                  ssid: PowerMeter AP
+        "500":
+          $ref: "#/components/responses/error"
+
+  /logger/config:
+    get:
+      tags:
+        - Logger
+      summary: Read the logger configuration
+      responses:
+        "200":
+          description: Logger configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/loggerConfig"
+        "500":
+          $ref: "#/components/responses/error"
+
+    patch:
+      tags:
+        - Logger
+      summary: Change the logger configuration
+      requestBody:
+        description: Merge patch to apply to the logger configuration
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/loggerConfig"
+      responses:
+        "200":
+          description: Switch configuration after applied changes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/loggerConfig"
+        "500":
+          $ref: "#/components/responses/error"
+
+components:
+  schemas:
+    info:
+      type: object
+      properties:
+        mac:
+          type: integer
+        firware:
+          type: string
+          pattern: ^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$
+        uptime_ms:
+          type: integer
+        filesystem:
+          type: object
+          properties:
+            total_B:
+              type: integer
+            used_B:
+              type: integer
+        heap:
+          type: object
+          properties:
+            total_B:
+              type: integer
+            used_B:
+              type: integer
+
+    measurement:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - Ac
+        measurement:
+          oneOf:
+            - $ref: "#/components/schemas/acMeasurement"
+
+    acMeasurement:
+      type: object
+      properties:
+        activePower_W:
+          type: number
+        reactivePower_var:
+          type: number
+        apparentPower_VA:
+          type: number
+        voltageRMS_V:
+          type: number
+        currentRMS_A:
+          type: number
+        powerFactor:
+          type: number
+
+    measuringConfig:
+      type: object
+      properties:
+        selected:
+          type: string
+          enum:
+            - Ac
+            - Simulation
+        options:
+          type: object
+          properties:
+            Ac:
+              $ref: "#/components/schemas/acMeasuringConfig"
+            Simulation:
+              $ref: "#/components/schemas/simulationMeasuringConfig"
+
+    acMeasuringConfig:
+      type: object
+      properties:
+        pins:
+          type: object
+          properties:
+            voltage:
+              type: integer
+            current:
+              type: integer
+        calibration:
+          type: object
+          properties:
+            voltage:
+              type: number
+            current:
+              type: number
+            phase:
+              type: number  
+
+    simulationMeasuringConfig:
+      type: object
+      properties:
+        measuringRunTime_ms:
+          type: integer
+        voltage:
+          $ref: "#/components/schemas/simulationValueConfig"
+        current:
+          $ref: "#/components/schemas/simulationValueConfig"
+        powerFactor:
+          $ref: "#/components/schemas/simulationValueConfig"
+
+    simulationValueConfig:
+      type: object
+      properties:
+        min:
+          type: number
+        max:
+          type: number
+    
+    trackerConfig:
+      type: object
+      properties:
+        title:
+          type: string
+        sampleCount:
+          type: integer
+        duration_s:
+          type: integer
+
+    trackerConfigs:
+      type: object
+      additionalProperties: 
+        $ref: "#/components/schemas/trackerConfig"
+
+    tracker:
+        allOf:
+          - $ref: "#/components/schemas/trackerConfig"
+        properties:
+          data:
+            type: array
+            items:
+              type: number
+
+    trackers:
+      type: object
+      additionalProperties:
+        $ref: "#/components/schemas/tracker"
+
+    switchConfig:
+      type: object
+      properties:
+        selected:
+          type: string
+          enum:
+            - None
+            - Relay
+        options:
+          type: object
+          properties:
+            None:
+              type: object
+              nullable: true
+            Relay:
+              $ref: "#/components/schemas/relayConfig"
+
+    relayConfig:
+      type: object
+      properties:
+        pin:
+          type: integer
+        isNormallyOpen:
+          type: boolean
+
+    clockConfig:
+      type: object
+      properties:
+        selected:
+          type: string
+          enum:
+            - Simulation
+            - Relay
+        options:
+          type: object
+          properties:
+            DS3231:
+              type: object
+              nullable: true
+            Simulation:
+              type: object
+              properties:
+                startTimestamp:
+                  type: integer
+                fastForward:
+                  type: number
+
+    wifiConfig:
+      type: object
+      properties:
+        mode:
+          type: string
+          enum:
+            - Accesspoint
+            - Stationary
+            - Accesspoint + Stationary
+        sta:
+          type: object
+          properties:  
+            ip:
+              $ref: "#/components/schemas/ipv4"
+            ssid:
+              type: string
+            password:
+              type: string
+            staticIP:
+              $ref: "#/components/schemas/ipv4"
+            gateway:
+              $ref: "#/components/schemas/ipv4"
+            subnet:
+              $ref: "#/components/schemas/ipv4"
+        ap:
+          type: object
+          properties:
+            ssid:
+              type: string
+            password:
+              type: string
+
+    ipv4:
+      type: string
+      pattern: (\b25[0-5]|\b2[0-4][0-9]|\b[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}
+
+    loggerConfig:
+      type: object
+      properties:
+        file:
+          allOf:
+            - $ref: "#/components/schemas/logStreamConfig"
+          properties:
+            filePath:
+              type: string
+        console:
+          allOf:
+            - $ref: "#/components/schemas/logStreamConfig"
+          properties:
+            baudRate:
+              type: integer
+
+    logStreamConfig:
+      type: object
+      properties:
+        showLevel:
+          type: boolean
+        minLevel:
+          $ref: "#/components/schemas/logLevel"
+        maxLevel:
+          $ref: "#/components/schemas/logLevel"
+
+    logLevel:
+      type: string
+      enum:
+        - Silent
+        - Error
+        - Warning
+        - Debug
+        - Info
+        - Verbose
+
+    trackerId:
+      type: string
+      pattern: ^\d+_\d+$
+
+    error:
+      type: object
+      properties:
+        traces:
+          type: array
+          items:
+            type: string
+        type:
+          type: string
+          enum:
+            - User
+            - Developer
+
+  responses:
+    error:
+      description: "An error ocurred"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/error"
+          

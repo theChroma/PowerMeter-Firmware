@@ -1,3 +1,5 @@
+#ifdef ESP32
+
 #include "Relay.h"
 #include "JsonResource/JsonResource.h"
 #include "ExceptionTrace/ExceptionTrace.h"
@@ -52,3 +54,5 @@ void Relay::setState(bool state)
         throw;
     }
 }
+
+#endif
