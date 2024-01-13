@@ -4,6 +4,7 @@
 #include "Config/Config.h"
 #include "Logger/Logger.h"
 #include "ExceptionTrace/ExceptionTrace.h"
+#include "SourceLocation/SourceLocation.h"
 #include <WiFi.h>
 #include <LittleFS.h>
 #include <functional>
@@ -32,7 +33,7 @@ namespace
         storedJson.merge_patch(requestJson);
 
         if(allowAdding && storedJson.size() > sizeBefore)
-            throw std::runtime_error("Adding properties using PATCH is not allowed here");
+            throw std::runtime_error(SOURCE_LOCATION + "Adding properties using PATCH is not allowed here");
 
         jsonResource.serialize(storedJson);
         return jsonResource.deserialize();

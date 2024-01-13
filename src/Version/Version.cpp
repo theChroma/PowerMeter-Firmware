@@ -23,8 +23,8 @@ Version::Version(const std::string& version)
     if (sscanf(version.c_str(), "%" SCNu16 ".%" SCNu16 ".%" SCNu16, &major, &minor, &patch) != 3)
     {
         std::stringstream errorMessage;
-        errorMessage << SOURCE_LOCATION << "Failed to parse \"" << version << "\" as Version";
-        throw std::runtime_error(errorMessage.str());
+        errorMessage << "Failed to parse \"" << version << "\" as Version";
+        throw std::runtime_error(SOURCE_LOCATION + errorMessage.str());
     }
 }
 

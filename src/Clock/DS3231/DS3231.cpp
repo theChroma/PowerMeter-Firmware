@@ -14,7 +14,7 @@ DS3231::DS3231(const json &configJson)
     try
     {
         if(!m_rtc.begin())
-            throw std::runtime_error("Failed to begin I2C Communication to DS3231");
+            throw std::runtime_error(SOURCE_LOCATION + "Failed to begin I2C Communication to DS3231");
         Logger[LogLevel::Info] << "Configured DS3231 clock sucessfully." << std::endl;
     }
     catch (...)

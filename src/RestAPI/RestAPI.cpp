@@ -45,7 +45,7 @@ void RestAPI::handle(const std::string &uri, WebRequestMethod method, const Json
                     << "The requested API version (v" << requestedApiVersion<< ") is not available. "
                     << "The latest available API version is v" << m_apiVersion << ". "
                     << "Try updating to the latest firmware.";
-                throw std::runtime_error(errorMessage.str());
+                throw std::runtime_error(SOURCE_LOCATION + errorMessage.str());
             }
             json requestJson;
             if (length > 0)
