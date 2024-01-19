@@ -11,7 +11,7 @@
 
 using namespace PM;
 
-namespace 
+namespace
 {
     RestAPI::JsonResponse handleGetJsonResource(const JsonResource& jsonResource)
     {
@@ -46,14 +46,14 @@ void Api::createSystemEndpoints(RestAPI& api)
         json responseJson;
         responseJson["mac"] = ESP.getEfuseMac();
         std::stringstream firmwareVersion;
-        
+
         responseJson["firmware"] = Version(POWERMETER_FIRMWARE_VERSION_MAJOR, POWERMETER_FIRMWARE_VERSION_MINOR, POWERMETER_FIRMWARE_VERSION_PATCH);
         responseJson["uptime_ms"] = millis();
         responseJson["filesystem"]["total_B"] = LittleFS.totalBytes();
         responseJson["filesystem"]["used_B"] = LittleFS.usedBytes();
         responseJson["heap"]["total_B"] = ESP.getHeapSize();
         responseJson["heap"]["used_B"] = ESP.getHeapSize() - ESP.getFreeHeap();
-        return RestAPI::JsonResponse(responseJson); 
+        return RestAPI::JsonResponse(responseJson);
     });
 
     api.handle("/reboot", HTTP_POST, [](json, Version){
@@ -63,7 +63,7 @@ void Api::createSystemEndpoints(RestAPI& api)
             ESP.restart();
             vTaskDelete(nullptr);
         }, "reboot", 1500, nullptr, 1, nullptr);
-        return RestAPI::JsonResponse(nullptr, 204); 
+        return RestAPI::JsonResponse(nullptr, 204);
     });
 }
 
@@ -76,7 +76,7 @@ void Api::createLoggerEndpoints(RestAPI& api, const JsonResource& configResource
     api.handle("/logger/config", HTTP_PATCH, [configResource, &server](const json& requestJson, Version){
         RestAPI::JsonResponse response = handlePatchJsonResource(configResource, requestJson);
         Config::configureLogger(configResource, server);
-        return response; 
+        return response;
     });
 }
 
@@ -88,7 +88,7 @@ void Api::createMeasuringEndpoints(
     std::reference_wrapper<Measurement>& measurement
 )
 {
-    api.handle("/measure", HTTP_GET, [&measurement](json, Version){        
+    api.handle("/measure", HTTP_GET, [&measurement](json, Version){
         return measurement.get().toJson();
     });
     api.handle("/measuring/config", HTTP_GET, [configResource](json, Version){
@@ -124,7 +124,7 @@ void Api::createSwitchEndpoints(RestAPI& api, const JsonResource& configResource
     api.handle("/switch/config", HTTP_PATCH, [configResource, &switchUnit](const json& requestJson, Version){
         RestAPI::JsonResponse response = handlePatchJsonResource(configResource, requestJson);
         switchUnit = Config::configureSwitch(configResource);
-        return response; 
+        return response;
     });
 }
 
@@ -136,7 +136,7 @@ void Api::createClockEndpoints(RestAPI &api, const JsonResource& configResource,
     api.handle("/clock/config", HTTP_PATCH, [configResource, &clock](const json& requestJson, Version){
         RestAPI::JsonResponse response = handlePatchJsonResource(configResource, requestJson);
         clock = Config::configureClock(configResource);
-        return response; 
+        return response;
     });
 }
 
@@ -150,18 +150,18 @@ void Api::createTrackerEndpoints(RestAPI& api, const JsonResource& configResourc
         return RestAPI::JsonResponse(responseJson);
     });
     api.handle("/trackers", HTTP_PUT, [&trackers](const json& requestJson, Version){
-        for(const auto& requestItems : requestJson.items())
+        json responseJson = json::object_t();
+        for(const auto& requestJsonItems : requestJson.items())
         {
-            try
+            const std::string& trackerId = requestJsonItems.key();
+            if (trackers.find(trackerId) != trackers.end())
             {
-                trackers.at(requestItems.key()).setData(requestItems.value());
-            }
-            catch(std::out_of_range)
-            {
-                ExceptionTrace::clear();
+                Tracker tracker = trackers.at(trackerId);
+                tracker.setData(requestJsonItems.value());
+                responseJson[trackerId] = tracker.getData();
             }
         }
-        return RestAPI::JsonResponse(requestJson);
+        return responseJson;
     });
     api.handle("/trackers/config", HTTP_GET, [configResource](json, Version){
         return handleGetJsonResource(configResource);
@@ -175,7 +175,7 @@ void Api::createTrackerEndpoints(RestAPI& api, const JsonResource& configResourc
         trackers = Config::configureTrackers(configResource, clock);
         return RestAPI::JsonResponse(configJson, 201);
     });
-    
+
     json trackersJson = configResource.deserialize();
     for(const auto& jsonTracker : trackersJson.items())
     {

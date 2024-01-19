@@ -152,6 +152,61 @@ paths:
         "500":
           $ref: "#/components/responses/error"
 
+    put:
+      tags:
+        - Tracker
+      summary: Overwrite existing tracker data
+      requestBody:
+        description: New tracker data to be replaced with. Non existing Tracker IDs will be ignored.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/tracker"
+            example:
+                "3600_60":
+                  title: Last 60 Minutes
+                  duration_s: 3600
+                  sampleCount: 60
+                  data:
+                    - 1233.2
+                    - 233.6
+                    - 96.34
+                "86400_24":
+                  title: Last 24 Hours
+                  duration_s: 86400
+                  sampleCount: 24
+                  data:
+                    - 1233.2
+                    - 233.6
+                    - 96.34
+      responses:
+        "200":
+          description: Tracker data after applied changes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/trackers"
+              example:
+                "3600_60":
+                  title: Last 60 Minutes
+                  duration_s: 3600
+                  sampleCount: 60
+                  data:
+                    - 1233.2
+                    - 233.6
+                    - 96.34
+                "86400_24":
+                  title: Last 24 Hours
+                  duration_s: 86400
+                  sampleCount: 24
+                  data:
+                    - 1233.2
+                    - 233.6
+                    - 96.34
+        "500":
+          $ref: "#/components/responses/error"
+
   /trackers/config:
     get:
       tags:
