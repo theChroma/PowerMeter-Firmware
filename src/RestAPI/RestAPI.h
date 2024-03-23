@@ -22,15 +22,18 @@ namespace PM
             JsonResponse(
                 const json& data = nullptr,
                 uint16_t statusCode = 200,
-                const Http::HeaderMap& headers = {}
+                const Http::HeaderMap& headers = {},
+                const std::function<void()>& doAfterSend = []{}
             ) :
                 data(data),
                 statusCode(statusCode),
-                headers(headers)
+                headers(headers),
+                doAfterSend(doAfterSend)
             {}
             json data;
             uint16_t statusCode;
             Http::HeaderMap headers;
+            std::function<void()> doAfterSend;
         };
 
         using JsonHandler = std::function<JsonResponse(const json&, const Version&)>;

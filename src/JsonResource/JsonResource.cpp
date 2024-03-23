@@ -1,12 +1,12 @@
 #include "JsonResource.h"
 #include "ExceptionTrace/ExceptionTrace.h"
 #include "SourceLocation/SourceLocation.h"
+#include "Logger/Logger.h"
 #include <fstream>
 #include <exception>
 
 #ifdef ESP32
 #include <LittleFS.h>
-#include <sys/stat.h>
 #include <regex>
 #endif
 
@@ -82,6 +82,7 @@ void JsonResource::serialize(const json& data) const
             file.open(m_filePath);
             fileData[m_jsonPointer].merge_patch(data);
             file << fileData.dump(1, '\t') << std::flush;
+
         }
     }
     catch(...)
@@ -155,7 +156,7 @@ void JsonResource::erase() const
             path = "";
             path.erase(seperatorIndex);
         };
-        
+
         bool success = LittleFS.remove(m_filePath.c_str());
         popBackPath(filePath);
         while(!filePath.empty())

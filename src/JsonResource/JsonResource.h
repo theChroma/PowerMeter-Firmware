@@ -10,7 +10,7 @@ namespace PM
         JsonResource() noexcept {};
         JsonResource(const std::string& path, const json::json_pointer& jsonPointer) noexcept;
         JsonResource(const std::string& uri);
-        
+
         json deserialize() const;
         void serialize(const json& data) const;
         void erase() const;
@@ -19,10 +19,10 @@ namespace PM
         void setFilePath(const std::string& path) noexcept;
         json::json_pointer getJsonPointer() const noexcept;
         std::string getFilePath() const noexcept;
-        
+
         operator std::string() const noexcept;
-        JsonResource& operator/=(const json::json_pointer& jsonPointer) noexcept; 
-        
+        JsonResource& operator/=(const json::json_pointer& jsonPointer) noexcept;
+
     private:
         std::string m_filePath;
         json::json_pointer m_jsonPointer;

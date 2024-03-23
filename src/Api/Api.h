@@ -8,32 +8,24 @@
 
 namespace PM
 {
-    namespace Api
+    class Api
     {
-        void createSystemEndpoints(RestAPI& api);
-        void createLoggerEndpoints(RestAPI &api, const JsonResource &configResource, AsyncWebServer &server);
+    public:
+        Api(RestAPI& api);
+        void createSystemEndpoints(const Version& firmwareVersion, const Version& apiVersion);
+        void createLoggerEndpoints(const JsonResource &configResource, AsyncWebServer &server);
+        void createSwitchEndpoints(const JsonResource& configResource, std::reference_wrapper<Switch>& switchUnit);
+        void createClockEndpoints(const JsonResource& configResource, std::reference_wrapper<Clock>& clock);
+        void createTrackerEndpoints(const JsonResource& configResource, TrackerMap& trackers, Clock& clock);
+        void createWiFiEndpoints(const JsonResource& configResource);
+        void createNetworkEndpoints(const JsonResource& configResource);
         void createMeasuringEndpoints(
-            RestAPI& api,
             const JsonResource& configResource,
             std::reference_wrapper<MeasuringUnit>& measuringUnit,
             std::reference_wrapper<Measurement>& measurement
         );
-        void createSwitchEndpoints(
-            RestAPI& api,
-            const JsonResource& configResource,
-            std::reference_wrapper<Switch>& switchUnit
-        );
-        void createClockEndpoints(
-            RestAPI& api,
-            const JsonResource& configResource,
-            std::reference_wrapper<Clock>& clock
-        );
-        void createTrackerEndpoints(
-            RestAPI& api,
-            const JsonResource& configResource,
-            TrackerMap& trackers,
-            Clock& clock
-        );
-        void createWiFiEndpoints(RestAPI& api, const JsonResource& configResource);
-    }
+
+    private:
+        RestAPI& m_restApi;
+    };
 }

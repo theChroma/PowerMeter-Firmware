@@ -25,7 +25,7 @@ using tl::optional;
 namespace
 {
     template<typename T>
-    using ImplementaitonMap = std::unordered_map<std::string, std::function<T&(const json&)>>; 
+    using ImplementaitonMap = std::unordered_map<std::string, std::function<T&(const json&)>>;
 
 
     template<typename T>
@@ -54,57 +54,14 @@ namespace
     }
 
 
-    bool configureWiFiStationary(const json& configJson)
+    IPAddress parseIpAddress(const std::string& ipString)
     {
-        Logger[LogLevel::Info] << "Configuring WiFi in stationary mode..." << std::endl;
-        try
-        {
-            const std::string& ssid = configJson.at("ssid");
-            const std::string& password = configJson.at("password");
-            const std::string& staticIP = configJson.at("staticIP");
-            const std::string& gateway = configJson.at("gateway");
-            const std::string& subnet = configJson.at("subnet");
-
-            auto parseIP = [](const std::string& address)
-            {
-                IPAddress ip;
-                if (!ip.fromString(address.c_str()))
-                    Logger[LogLevel::Warning] << SOURCE_LOCATION << "Could not convert \"" << address << "\" to 'IPAdress'" << std::endl;
-                return ip;
-            };
-            
-            WiFi.disconnect(true);
-            WiFi.config(parseIP(staticIP), parseIP(gateway), parseIP(subnet));
-            WiFi.begin(ssid.c_str(), password.c_str());
-            WiFi.setSleep(false);
-
-            if(WiFi.waitForConnectResult(3000) == WL_CONNECTED)
-                return true;
-        }
-        catch(...)
-        {
-            ExceptionTrace::trace(SOURCE_LOCATION + "Failed to configure WiFi in Stationary Mode");
-            throw;
-        }
-        return false;
+        IPAddress ip;
+        if (!ip.fromString(ipString.c_str()))
+            throw std::runtime_error(SOURCE_LOCATION + "Could not parse \"" + ipString + "\" as IPv4");
+        return ip;
     }
 
-
-    bool configureWifiAccesspoint(const json& configJson)
-    {
-        Logger[LogLevel::Info] << "Configuring WiFi as accesspoint..." << std::endl;
-        try
-        {
-            const std::string& ssid = configJson.at("ssid");
-            const std::string& password = configJson.at("password");
-            return WiFi.softAP(ssid.c_str(), password.c_str());
-        }
-        catch(...)
-        {
-            ExceptionTrace::trace(SOURCE_LOCATION + "Failed to configure WiFi as accesspoint from");
-            throw;
-        }
-    }
 
     LogStream configureLogStream(const json& configJson, std::ostream& stream)
     {
@@ -162,8 +119,8 @@ std::reference_wrapper<MeasuringUnit> Config::configureMeasuringUnit(const JsonR
     try
     {
         ImplementaitonMap<MeasuringUnit> measuringUnits = {
-            {"Ac", configureImplementation<AcMeasuringUnit>}, 
-            {"Simulation", configureImplementation<SimulationMeasuringUnit>}, 
+            {"Ac", configureImplementation<AcMeasuringUnit>},
+            {"Simulation", configureImplementation<SimulationMeasuringUnit>},
         };
         return getSelectedImplementation<MeasuringUnit>(configResource, measuringUnits);
     }
@@ -181,8 +138,8 @@ std::reference_wrapper<Clock> Config::configureClock(const JsonResource& configR
     try
     {
         ImplementaitonMap<Clock> clocks = {
-            {"DS3231", configureImplementation<DS3231>}, 
-            {"Simulation", configureImplementation<SimulationClock>}, 
+            {"DS3231", configureImplementation<DS3231>},
+            {"Simulation", configureImplementation<SimulationClock>},
         };
         return getSelectedImplementation<Clock>(configResource, clocks);
     }
@@ -200,11 +157,10 @@ std::reference_wrapper<Switch> Config::configureSwitch(const JsonResource& confi
     try
     {
         ImplementaitonMap<Switch> switches = {
-            {"None", configureImplementation<NoSwitch>}, 
-            {"Relay", configureImplementation<Relay>}, 
+            {"None", configureImplementation<NoSwitch>},
+            {"Relay", configureImplementation<Relay>},
         };
         Switch& switchUnit = getSelectedImplementation<Switch>(configResource, switches);
-        Logger[LogLevel::Debug] << "Address of Switch: " << &switchUnit << std::endl;
         return switchUnit;
     }
     catch (...)
@@ -250,53 +206,97 @@ TrackerMap Config::configureTrackers(const JsonResource& configResource, std::re
 }
 
 
-void Config::configureWiFi(const JsonResource& configResource)
+void Config::configureNetwork(const JsonResource &configResource)
 {
-    Logger[LogLevel::Info] << "Configuring WiFi..." << std::endl;
-
     try
     {
         json configJson = configResource.deserialize();
 
-        WiFi.mode(WiFiMode_t::WIFI_MODE_STA);
-        if(configureWiFiStationary(configJson.at("sta")))
+        json& hostnameJson = configJson.at("hostname");
+        if (hostnameJson.is_null())
         {
-            Logger[LogLevel::Info] 
-                << "WiFi connected sucessfully to '"
-                << configJson.at("sta").at("ssid")
-                << "'. " 
-                << "IP: http://" << WiFi.localIP().toString().c_str()
-                << std::endl;
-            
-            MDNS.end();
-            MDNS.begin("powermeter-abc");
-            MDNS.addService("http", "tcp", 80);
-            MDNS.addService("powermeter", "tcp", 80);
-            return;
+            std::stringstream hostname;
+            hostname << "powermeter-" << std::hex << ESP.getEfuseMac();
+            hostnameJson = hostname.str();
+        }
+        const std::string& hostname = hostnameJson;
+        WiFi.setHostname(hostname.c_str());
+
+        json& stationaryJson = configJson.at("stationary");
+        json& accesspointJson = configJson.at("accesspoint");
+        bool accesspointAlwaysActive = accesspointJson.at("alwaysActive");
+        WiFi.mode(WIFI_AP_STA);
+        {
+            Logger[LogLevel::Info] << "Trying to connect to a stationary WiFi network..." << std::endl;
+            const std::string& ssid = stationaryJson.at("ssid");
+            const std::string& password = stationaryJson.at("password");
+            const std::string& ipMode = stationaryJson.at("ipMode");
+            json& ipConfigJson = stationaryJson.at("ipConfig");
+            const std::string& ipAddress = ipConfigJson.at("ipAddress");
+            const std::string& gatewayAddress = ipConfigJson.at("gatewayAddress");
+            const std::string& subnetMask = ipConfigJson.at("subnetMask");
+            stationaryJson["macAddress"] = WiFi.macAddress().c_str();
+
+            if (stationaryJson.at("ipMode") == "Static")
+                WiFi.config(parseIpAddress(ipAddress), parseIpAddress(gatewayAddress), parseIpAddress(subnetMask));
+            WiFi.disconnect();
+            WiFi.begin(ssid.c_str(), password.c_str());
+            WiFi.setSleep(false);
+            if(WiFi.waitForConnectResult(3000) == WL_CONNECTED)
+            {
+                ipConfigJson["ipAddress"] = WiFi.localIP().toString().c_str();
+                ipConfigJson["gatewayAddress"] = WiFi.gatewayIP().toString().c_str();
+                ipConfigJson["subnetMask"] = WiFi.subnetMask().toString().c_str();
+                if (!accesspointAlwaysActive)
+                    WiFi.mode(WIFI_STA);
+
+                Logger[LogLevel::Info]
+                    << "Connected to \""
+                    << ssid
+                    << "\", IP: "
+                    << WiFi.localIP().toString().c_str()
+                    << std::endl;
+            }
+        }
+        {
+            json& ssidJson = accesspointJson.at("ssid");
+            if (ssidJson.is_null())
+            {
+                std::stringstream ssid;
+                ssid << "Power Meter " << std::hex << ESP.getEfuseMac();
+                ssidJson = ssid.str();
+            }
+            const std::string& ssid = ssidJson;
+            const std::string& password = accesspointJson.at("password");
+            json& ipConfigJson = accesspointJson.at("ipConfig");
+            IPAddress ipAddress = parseIpAddress(ipConfigJson.at("ipAddress"));
+            accesspointJson["macAddress"] = WiFi.softAPmacAddress().c_str();
+
+            if (WiFi.status() != WL_CONNECTED || accesspointAlwaysActive)
+            {
+                WiFi.softAP(ssid.c_str(), password.c_str());
+                delay(100);
+                WiFi.softAPConfig(ipAddress, ipAddress, IPAddress(255, 255, 255, 0));
+                ipConfigJson["ipAddress"] = WiFi.softAPIP().toString().c_str();
+                Logger[LogLevel::Info]
+                    << "Opened accespoint \""
+                    << ssid
+                    << "\", IP: "
+                    << WiFi.softAPIP().toString().c_str()
+                    << std::endl;
+            }
         }
 
-        Logger[LogLevel::Info] 
-            << "Couldn't connect to" 
-            << configJson.at("sta").at("ssid")
-            << ". Setting up Acesspoint..."
-            << std::endl;
+        MDNS.end();
+        MDNS.begin(hostname.c_str());
+        MDNS.addService("http", "tcp", 80);
+        MDNS.addService("powermeter", "tcp", 80);
 
-        WiFi.mode(WiFiMode_t::WIFI_MODE_AP);
-        if(configureWifiAccesspoint(configJson.at("ap")))
-        {
-            Logger[LogLevel::Info] 
-                << "WiFi configured sucessfully in Acesspoint Mode. Network Name: "
-                << configJson.at("ap").at("ssid")
-                << " IP: http://" << WiFi.softAPIP().toString().c_str()
-                << std::endl;
-            return;
-        }
-
-        throw std::runtime_error("Failed to configure WiFi");        
+        configResource.serialize(configJson);
     }
     catch(...)
     {
-        ExceptionTrace::trace(SOURCE_LOCATION + "Failed to configure WiFi");
+        ExceptionTrace::trace(SOURCE_LOCATION + "Failed to configure Network");
         throw;
     }
 }

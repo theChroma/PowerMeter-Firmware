@@ -47,20 +47,6 @@ paths:
         "204":
           description: The device will be rebooted now
 
-  /tasks:
-    get:
-      tags:
-        - System
-      summary: Get information about all tasks
-      responses:
-        "200":
-          description: All tasks on the device
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/tasks"
-
-
   /measure:
     get:
       tags:
@@ -525,11 +511,11 @@ components:
               $ref: "#/components/schemas/ipv4"
             macAddress:
               $ref: "#/components/schemas/mac"
-            status:
+            mode:
               type: string
               enum:
-                - AP Connected
-                - STA Connected
+                - Accesspoint
+                - Stationary
         statistics:
           type: object
           properties:
@@ -546,27 +532,6 @@ components:
               $ref: "#/components/schemas/version"
             api:
               $ref: "#/components/schemas/version"
-
-    tasks:
-      type: array
-      items:
-        $ref: "#/components/schemas/task"
-
-    task:
-      type: object
-      properties:
-        id:
-          type: integer
-        core:
-          type: integer
-        cpuUsage_%:
-          type: number
-        name:
-          type: string
-        priority:
-          type: integer
-        stack:
-          $ref: "#/components/schemas/memory"
 
     memory:
       type: object

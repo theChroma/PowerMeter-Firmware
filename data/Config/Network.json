@@ -1,17 +1,21 @@
 {
-    "hostname": "powermeter-{mac}",
-    "active": "auto",
-    "available": {
-        "sta": {
-            "ssid": "",
-            "password": "",
-            "staticIP": "0.0.0.0",
-            "gateway": "0.0.0.0",
-            "subnet": "0.0.0.0"
-        },
-        "ap": {
-            "ssid": "Power Meter AP",
-            "password": "SuperSecretStuff"
+    "hostname": null,
+    "stationary": {
+        "ssid": "",
+        "password": "",
+        "ipMode": "DHCP",
+        "ipConfig": {
+            "ipAddress": "0.0.0.0",
+            "gatewayAddress": "0.0.0.0",
+            "subnetMask": "0.0.0.0"
+        }
+    },
+    "accesspoint": {
+        "alwaysActive": true,
+        "ssid": null,
+        "password": "123456789",
+        "ipConfig": {
+            "ipAddress": "192.168.4.1"
         }
     }
 }

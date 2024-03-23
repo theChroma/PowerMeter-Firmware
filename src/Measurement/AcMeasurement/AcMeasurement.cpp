@@ -3,7 +3,19 @@
 
 using PM::AcMeasurement;
 
-AcMeasurement::AcMeasurement(float voltage_V, float current_A, float activePower_W) noexcept : 
+namespace
+{
+    json createMeasurementJson(const std::string& label, float value, const std::string& unit)
+    {
+        return {
+            {"label", label},
+            {"value", value},
+            {"unit", unit},
+        };
+    }
+}
+
+AcMeasurement::AcMeasurement(float voltage_V, float current_A, float activePower_W) noexcept :
     m_voltage_V(voltage_V),
     m_current_A(current_A),
     m_activePower_W(activePower_W)
@@ -12,14 +24,14 @@ AcMeasurement::AcMeasurement(float voltage_V, float current_A, float activePower
 
 json AcMeasurement::toJson() const noexcept
 {
-    json measurementJson;
-    measurementJson["voltage_V"] = getVoltage_V();
-    measurementJson["current_A"] = getCurrent_A();
-    measurementJson["activePower_W"] = getActivePower_W();
-    measurementJson["apparentPower_VA"] = getApparentPower_VA();
-    measurementJson["reactivePower_var"] = getReactivePower_var();
-    measurementJson["powerFactor"] = getPowerFactor();
-    return measurementJson;
+    return {
+        createMeasurementJson("Active Power", getActivePower_W(), "W"),
+        createMeasurementJson("Apparent Power", getApparentPower_VA(), "VA"),
+        createMeasurementJson("Reactive Power", getReactivePower_var(), "var"),
+        createMeasurementJson("Power Factor", getPowerFactor(), ""),
+        createMeasurementJson("Voltage", getVoltage_V(), "V"),
+        createMeasurementJson("Current", getCurrent_A(), "A"),
+    };
 }
 
 float AcMeasurement::getTrackerValue() const noexcept
@@ -62,7 +74,7 @@ float AcMeasurement::getApparentPower_VA() const noexcept
 
 
 float AcMeasurement::getPowerFactor() const noexcept
-{   
+{
     float powerFactor = m_activePower_W / getApparentPower_VA();
     if(powerFactor > 0.99f)
         powerFactor = 1.0f;

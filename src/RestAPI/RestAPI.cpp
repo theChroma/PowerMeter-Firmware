@@ -13,7 +13,7 @@ namespace
     std::string escapeSlashes(const std::string& input)
     {
         std::string result;
-        for (char c : input) 
+        for (char c : input)
         {
             if (c == '/')
                 result += '\\';
@@ -27,7 +27,16 @@ RestAPI::RestAPI(AsyncWebServer &server, const Version& apiVersion, const std::s
     m_server(server),
     m_apiVersion(apiVersion),
     m_baseUri(baseUri)
-{}
+{
+    std::stringstream uriRegex;
+    uriRegex << '^' << escapeSlashes(m_baseUri) << "/(.*)$";
+    m_server.on(uriRegex.str().c_str(), HTTP_OPTIONS, [](AsyncWebServerRequest* request){
+        AsyncWebServerResponse* response = request->beginResponse(200);
+        response->addHeader("Access-Control-Allow-Origin", "*");
+        response->addHeader("Access-Control-Allow-Methods", "*");
+        request->send(response);
+    });
+}
 
 void RestAPI::handle(const std::string &uri, WebRequestMethod method, const JsonHandler &handler) noexcept
 {
@@ -42,7 +51,7 @@ void RestAPI::handle(const std::string &uri, WebRequestMethod method, const Json
             {
                 std::stringstream errorMessage;
                 errorMessage
-                    << "The requested API version (v" << requestedApiVersion<< ") is not available. "
+                    << "The requested API version (v" << requestedApiVersion << ") is not available. "
                     << "The latest available API version is v" << m_apiVersion << ". "
                     << "Try updating to the latest firmware.";
                 throw std::runtime_error(SOURCE_LOCATION + errorMessage.str());
@@ -58,7 +67,7 @@ void RestAPI::handle(const std::string &uri, WebRequestMethod method, const Json
         }
         catch (...)
         {
-            Logger[LogLevel::Error] 
+            Logger[LogLevel::Error]
                 << "Exception occurred at " << SOURCE_LOCATION << "\r\n"
                 << ExceptionTrace::what(false) << std::endl;
             jsonResponse.data = ExceptionTrace::get();
@@ -68,15 +77,16 @@ void RestAPI::handle(const std::string &uri, WebRequestMethod method, const Json
             "application/json",
             (jsonResponse.data == nullptr && jsonResponse.statusCode == 204 ) ? "" : jsonResponse.data.dump(1, '\t').c_str()
         );
+        response->addHeader("Access-Control-Allow-Origin", "*");
         for (const auto& header : jsonResponse.headers)
             response->addHeader(header.first.c_str(), header.second.c_str());
         request->send(response);
+        jsonResponse.doAfterSend();
     };
 
-    using namespace std::placeholders;
     std::stringstream uriRegex;
     uriRegex << '^' << escapeSlashes(m_baseUri) << "/v(.*)" << escapeSlashes(uri) << '$';
-    
+
     m_server.on(
         uriRegex.str().c_str(),
         method,

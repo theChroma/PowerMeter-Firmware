@@ -9,7 +9,7 @@
 #include <vector>
 
 namespace PM
-{  
+{
     namespace Config
     {
         void configureLogger(const JsonResource& configResource, AsyncWebServer& server);
@@ -17,6 +17,6 @@ namespace PM
         std::reference_wrapper<Clock> configureClock(const JsonResource& configResource);
         std::reference_wrapper<Switch> configureSwitch(const JsonResource& configResource);
         TrackerMap configureTrackers(const JsonResource& configResource, std::reference_wrapper<Clock> clock);
-        void configureWiFi(const JsonResource& configResource);
+        void configureNetwork(const JsonResource& configResource);
     }
 }

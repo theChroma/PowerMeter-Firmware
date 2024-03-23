@@ -1,5 +1,5 @@
 {
-    "selected": "Simulation",
+    "selected": "Ac",
     "options": {
         "Simulation": {
             "measuringRunTime_ms": 0,
@@ -18,7 +18,7 @@
         },
         "Ac": {
             "pins": {
-                "voltage": 33,  
+                "voltage": 33,
                 "current": 32
             },
             "calibration": {

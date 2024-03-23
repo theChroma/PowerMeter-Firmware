@@ -18,12 +18,12 @@ AcMeasuringUnit::AcMeasuringUnit(const json& configJson)
     {
         m_emon.voltage(
             configJson.at("/pins/voltage"_json_pointer),
-            configJson.at("/pins/current"_json_pointer),
-            configJson.at("/calibration/voltage"_json_pointer)
+            configJson.at("/calibration/voltage"_json_pointer),
+            configJson.at("/calibration/phase"_json_pointer)
         );
         m_emon.current(
-            configJson.at("/calibration/current"_json_pointer),
-            configJson.at("/calibration/phase"_json_pointer)
+            configJson.at("/pins/current"_json_pointer),
+            configJson.at("/calibration/current"_json_pointer)
         );
         Logger[LogLevel::Info] << "Configured AC measuring unit sucessfully." << std::endl;
     }
