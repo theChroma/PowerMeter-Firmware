@@ -21,7 +21,16 @@ Relay::Relay(const json &configJson)
         m_pin = configJson.at("pin");
         m_isNormallyOpen = configJson.at("isNormallyOpen");
 
-        bool state = stateResource.deserialize();
+        bool state = false;
+        try
+        {
+            state = stateResource.deserialize();
+        }
+        catch (...)
+        {
+            ExceptionTrace::clear();
+        }
+
         pinMode(m_pin, OUTPUT);
         digitalWrite(m_pin,  m_isNormallyOpen ? state : !state);
         Logger[LogLevel::Info] << "Relay configured sucessfully." << std::endl;

@@ -7,6 +7,7 @@
 #include "Clock/SimulationClock/SimulationClock.h"
 #include "MeasuringUnit/AcMeasuringUnit/AcMeasuringUnit.h"
 #include "MeasuringUnit/SimulationMeasuringUnit/SimulationMeasuringUnit.h"
+#include "JsonResource/BackedUpJsonResource/BackedUpJsonResource.h"
 #include "Switch/NoSwitch/NoSwitch.h"
 #include "Switch/Relay/Relay.h"
 #include "ExceptionTrace/ExceptionTrace.h"

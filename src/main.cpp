@@ -6,6 +6,7 @@
 #include "SourceLocation/SourceLocation.h"
 #include "ExceptionTrace/ExceptionTrace.h"
 #include "MeasuringUnit/MeasuringUnit.h"
+#include "JsonResource/BackedUpJsonResource/BackedUpJsonResource.h"
 #include "FileBrowser/FileBrowser.h"
 #include "RestAPI/RestAPI.h"
 #include "esp32/rom/rtc.h"
@@ -35,12 +36,6 @@ namespace
         POWERMETER_API_VERSION_MINOR,
         POWERMETER_API_VERSION_PATCH
     );
-    const JsonResource loggerConfigResource("/Config/Logger.json");
-    const JsonResource networkConfigResource("/Config/Network.json");
-    const JsonResource measuringConfigResource("/Config/Measuring.json");
-    const JsonResource switchConfigResource("/Config/Switch.json");
-    const JsonResource clockConfigResource("/Config/Clock.json");
-    const JsonResource trackerConfigResource("/Config/Trackers.json");
 
     const char* getResetReason(uint8_t cpu)
     {
@@ -73,8 +68,8 @@ void measure(void* context)
         MeasuringContext& measuringContext = *static_cast<MeasuringContext*>(context);
         measuringContext.measurement = measuringContext.measuringUnit.get().measure();
 
-        // for (auto& tracker : measuringContext.trackers)
-        //     tracker.second.track(measuringContext.measurement.get().getTrackerValue());
+        for (auto& tracker : measuringContext.trackers)
+            tracker.second.track(measuringContext.measurement.get().getTrackerValue());
 
         delay(500);
     }
@@ -93,51 +88,15 @@ void setup()
     Serial.begin(115200);
     try
     {
-        if (!LittleFS.begin(false, "", 30))
+        if (!LittleFS.begin(true, "", 30))
             throw std::runtime_error("Failed to mount Filesystem");
 
-
-
-        const JsonResource writeTestResource("/writeTest/writeTest.json");
-        try
-        {
-            writeTestResource.deserialize();
-            Logger[LogLevel::Debug] << "Deserialize success!" << std::endl;
-
-            size_t count = 0;
-            try
-            {
-
-                Logger[LogLevel::Debug] << "Starting write test..." << std::endl;
-                for (count = 0; count < 1000; count++)
-                {
-                    json data = {
-                        {"text", "Lorem ipsum dolor sit amet "},
-                        {"count", count},
-                    };
-                    writeTestResource.serialize(data);
-                    json readData = writeTestResource.deserialize();
-                    if (data != readData)
-                    {
-                        throw std::runtime_error("Doesn't matcht");
-                    }
-                }
-                Logger[LogLevel::Debug] << "Write test finished!" << std::endl;
-            }
-            catch(...)
-            {
-                Logger[LogLevel::Error]
-                    << "Exception occurred at " << SOURCE_LOCATION << "\r\n"
-                    << ExceptionTrace::what() << std::endl;
-                Logger[LogLevel::Debug] << "count="<< count << std::endl;
-            }
-        }
-        catch(...)
-        {
-            Logger[LogLevel::Debug] << "Deserialize failed" << std::endl;
-        }
-
-
+        static const BackedUpJsonResource switchConfigResource("/Config/Switch.json");
+        static const BackedUpJsonResource loggerConfigResource("/Config/Logger.json");
+        static const BackedUpJsonResource networkConfigResource("/Config/Network.json");
+        static const BackedUpJsonResource measuringConfigResource("/Config/Measuring.json");
+        static const BackedUpJsonResource clockConfigResource("/Config/Clock.json");
+        static const BackedUpJsonResource trackerConfigResource("/Config/Trackers.json");
 
 
         static AsyncWebServer server(80);
@@ -182,7 +141,7 @@ void setup()
             measuringContext.measurement
         );
 
-        Logger[LogLevel::Info] << "Boot sequence finished. Running..." << std::endl;
+Logger[LogLevel::Info] << "Boot sequence finished. Running..." << std::endl;
 
         xTaskCreateUniversal(
             // Task function must be wrapped, to allow exception handling

@@ -7,21 +7,20 @@ namespace PM
     class JsonResource
     {
     public:
-        JsonResource() noexcept {};
         JsonResource(const std::string& path, const json::json_pointer& jsonPointer) noexcept;
         JsonResource(const std::string& uri);
 
-        json deserialize() const;
-        void serialize(const json& data) const;
-        void erase() const;
+        virtual json deserialize() const;
+        virtual void serialize(const json& data) const;
+        virtual void erase() const;
 
-        void setJsonPointer(const json::json_pointer& jsonPointer) noexcept;
-        void setFilePath(const std::string& path) noexcept;
-        json::json_pointer getJsonPointer() const noexcept;
-        std::string getFilePath() const noexcept;
+        virtual void setJsonPointer(const json::json_pointer& jsonPointer) noexcept;
+        virtual void setFilePath(const std::string& path) noexcept;
+        virtual json::json_pointer getJsonPointer() const noexcept;
+        virtual std::string getFilePath() const noexcept;
 
-        operator std::string() const noexcept;
-        JsonResource& operator/=(const json::json_pointer& jsonPointer) noexcept;
+        virtual operator std::string() const noexcept;
+        virtual JsonResource& operator/=(const json::json_pointer& jsonPointer) noexcept;
 
     private:
         std::string m_filePath;

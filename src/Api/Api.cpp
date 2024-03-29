@@ -69,12 +69,6 @@ Api::Api(RestAPI &api) : m_restApi(api)
 void Api::createSystemEndpoints(const Version& firmwareVersion, const Version& apiVersion)
 {
     m_restApi.handle("/info", HTTP_GET, [firmwareVersion, apiVersion](json, Version){
-
-        // json networkJson;
-        // networkJson["interface"] = "";
-        // networkJson["ipAddress"] = Network::CurrentInterface::getIpAddress().toString().c_str();
-        // networkJson["hostname"] = Network::getHostname();
-
         json versionsJson;
         versionsJson["firmware"] = firmwareVersion;
         versionsJson["api"] = apiVersion;
@@ -106,10 +100,10 @@ void Api::createSystemEndpoints(const Version& firmwareVersion, const Version& a
 
 void Api::createLoggerEndpoints(const JsonResource& configResource, AsyncWebServer& server)
 {
-    m_restApi.handle("/logger/config", HTTP_GET, [configResource](json, Version){
+    m_restApi.handle("/logger/config", HTTP_GET, [&configResource](json, Version){
         return handleGetJsonResource(configResource);
     });
-    m_restApi.handle("/logger/config", HTTP_PATCH, [configResource, &server](const json& requestJson, Version){
+    m_restApi.handle("/logger/config", HTTP_PATCH, [&configResource, &server](const json& requestJson, Version){
         RestAPI::JsonResponse response = handlePatchJsonResource(configResource, requestJson);
         Config::configureLogger(configResource, server);
         return response;
@@ -126,10 +120,10 @@ void Api::createMeasuringEndpoints(
     m_restApi.handle("/measurement", HTTP_GET, [&measurement](json, Version){
         return measurement.get().toJson();
     });
-    m_restApi.handle("/measuring/config", HTTP_GET, [configResource](json, Version){
+    m_restApi.handle("/measuring/config", HTTP_GET, [&configResource](json, Version){
         return handleGetJsonResource(configResource);
     });
-    m_restApi.handle("/measuring/config", HTTP_PATCH, [configResource, &measuringUnit](const json& requestJson, Version){
+    m_restApi.handle("/measuring/config", HTTP_PATCH, [&configResource, &measuringUnit](const json& requestJson, Version){
         RestAPI::JsonResponse response = handlePatchJsonResource(configResource, requestJson);
         measuringUnit = Config::configureMeasuringUnit(configResource);
         return response;
@@ -154,10 +148,10 @@ void Api::createSwitchEndpoints(const JsonResource& configResource, std::referen
             responseJson = state.value();
         return responseJson;
     });
-    m_restApi.handle("/switch/config", HTTP_GET, [configResource](json, Version){
+    m_restApi.handle("/switch/config", HTTP_GET, [&configResource](json, Version){
         return handleGetJsonResource(configResource);
     });
-    m_restApi.handle("/switch/config", HTTP_PATCH, [configResource, &switchUnit](const json& requestJson, Version){
+    m_restApi.handle("/switch/config", HTTP_PATCH, [&configResource, &switchUnit](const json& requestJson, Version){
         RestAPI::JsonResponse response = handlePatchJsonResource(configResource, requestJson);
         switchUnit = Config::configureSwitch(configResource);
         return response;
@@ -167,10 +161,10 @@ void Api::createSwitchEndpoints(const JsonResource& configResource, std::referen
 
 void Api::createClockEndpoints(const JsonResource& configResource, std::reference_wrapper<Clock>& clock)
 {
-    m_restApi.handle("/clock/config", HTTP_GET, [configResource](json, Version){
+    m_restApi.handle("/clock/config", HTTP_GET, [&configResource](json, Version){
         return handleGetJsonResource(configResource);
     });
-    m_restApi.handle("/clock/config", HTTP_PATCH, [configResource, &clock](const json& requestJson, Version){
+    m_restApi.handle("/clock/config", HTTP_PATCH, [&configResource, &clock](const json& requestJson, Version){
         RestAPI::JsonResponse response = handlePatchJsonResource(configResource, requestJson);
         clock = Config::configureClock(configResource);
         return response;
@@ -201,10 +195,10 @@ void Api::createTrackerEndpoints(const JsonResource& configResource, TrackerMap&
         }
         return responseJson;
     });
-    m_restApi.handle("/trackers/config", HTTP_GET, [configResource](json, Version){
+    m_restApi.handle("/trackers/config", HTTP_GET, [&configResource](json, Version){
         return handleGetJsonResource(configResource);
     });
-    m_restApi.handle("/trackers/config", HTTP_POST, [configResource, &trackers, &clock](const json& requestJson, Version){
+    m_restApi.handle("/trackers/config", HTTP_POST, [&configResource, &trackers, &clock](const json& requestJson, Version){
         json configJson = configResource.deserialize();
         std::stringstream key;
         key << requestJson.at("duration_s") << "_" << requestJson.at("sampleCount");
@@ -237,15 +231,15 @@ void Api::createTrackerEndpoints(const JsonResource& configResource, TrackerMap&
 
 void Api::createNetworkEndpoints(const JsonResource &configResource)
 {
-    m_restApi.handle("/network/config", HTTP_GET, [configResource](json, Version){
+    m_restApi.handle("/network/config", HTTP_GET, [&configResource](json, Version){
         RestAPI::JsonResponse response = handleGetJsonResource(configResource);
         response.data["stationary"]["macAddress"] = WiFi.macAddress().c_str();
         response.data["acesspoint"]["macAddress"] = WiFi.softAPmacAddress().c_str();
         return response;
     });
-    m_restApi.handle("/network/config", HTTP_PATCH, [configResource](const json& requestJson, Version){
+    m_restApi.handle("/network/config", HTTP_PATCH, [&configResource](const json& requestJson, Version){
         RestAPI::JsonResponse response = handlePatchJsonResource(configResource, requestJson);
-        response.doAfterSend = [configResource]{
+        response.doAfterSend = [&configResource]{
             Config::configureNetwork(configResource);
         };
         return response;

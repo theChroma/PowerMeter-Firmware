@@ -16,7 +16,7 @@ Tracker::Tracker(
     const JsonResource& lastInputResource,
     const JsonResource& lastSampleResource,
     const AverageAccumulator& accumulator
-) noexcept : 
+) noexcept :
     m_title(title),
     m_duration_s(duration_s),
     m_sampleCount(sampleCount),
@@ -40,20 +40,20 @@ void Tracker::track(float value)
 
         if(secondsSinceLastInput <= 0)
             return;
-        
+
         for(size_t i = 0; i < secondsSinceLastInput; i++)
         {
             m_lastInputResource.serialize(m_clock.now());
             m_accumulator.add(value);
         }
-        
+
         time_t lastSampleTimestamp = getTimestamp(m_lastSampleResource);
         uint32_t timesElapsed = (m_clock.now() - lastSampleTimestamp) / (m_duration_s / m_sampleCount);
 
         if(timesElapsed > 0)
         {
             for(size_t i = 0; i < timesElapsed - 1; i++)
-                updateData(0.0f);
+                updateData(NAN);
 
             updateData(m_accumulator.getAverage());
             m_accumulator.reset();
@@ -131,7 +131,7 @@ void Tracker::updateData(float value)
         try
         {
             values = m_dataResource.deserialize();
-        }                     
+        }
         catch(...)
         {
             ExceptionTrace::clear();
@@ -140,7 +140,7 @@ void Tracker::updateData(float value)
 
         if(values.size() > m_sampleCount)
             values.erase(values.begin());
-        
+
         m_dataResource.serialize(values);
         m_lastSampleResource.serialize(m_clock.now());
     }
@@ -160,7 +160,7 @@ time_t Tracker::getTimestamp(const JsonResource& timestampResource) const
     {
         return timestampResource.deserialize();
     }
-    catch(...) 
+    catch(...)
     {
         ExceptionTrace::clear();
         timestampResource.serialize(m_clock.now());

@@ -2,7 +2,6 @@
 #include "ExceptionTrace/ExceptionTrace.h"
 #include "SourceLocation/SourceLocation.h"
 #include <algorithm>
-#include <fstream>
 
 using namespace PM;
 

@@ -157,11 +157,11 @@ void JsonResource::erase() const
             path.erase(seperatorIndex);
         };
 
-        bool success = LittleFS.remove(m_filePath.c_str());
+        LittleFS.remove(m_filePath.c_str());
         popBackPath(filePath);
         while(!filePath.empty())
         {
-            bool success = LittleFS.rmdir(filePath.c_str());
+            LittleFS.rmdir(filePath.c_str());
             popBackPath(filePath);
         }
 #endif
