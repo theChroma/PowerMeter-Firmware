@@ -17,19 +17,27 @@ namespace PM
 
         T getCached(const std::function<T()>& doGet) const
         {
-            if (!m_enabled && !m_value)
+            if (!m_enabled)
                 return doGet();
-            m_value = doGet();
+            if (!m_value.has_value())
+                m_value = doGet();
             return m_value.value();
         }
 
 
-        void set(const T& value, const std::function<void(const T&)>& doSet)
+        void set(const T& value)
         {
-            doSet(value);
             if (m_enabled)
                 m_value = value;
         }
+
+
+        CachedValue& operator=(const T& value)
+        {
+            set(value);
+            return *this;
+        }
+
 
         void invalidateCache() noexcept
         {

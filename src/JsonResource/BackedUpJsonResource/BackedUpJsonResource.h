@@ -1,6 +1,7 @@
 #pragma once
 
 #include "JsonResource/JsonResource.h"
+#include "CachedValue/CachedValue.h"
 #include <array>
 
 
@@ -9,8 +10,7 @@ namespace PM
     class BackedUpJsonResource : public JsonResource
     {
     public:
-        BackedUpJsonResource(const std::string& path, const json::json_pointer& jsonPointer, bool useCaching = true) noexcept;
-        BackedUpJsonResource(const std::string& uri, bool useCaching = true);
+        BackedUpJsonResource(const std::string& path, bool useCaching = true) noexcept;
 
         json deserialize() const override;
         void serialize(const json& data) override;
@@ -20,6 +20,7 @@ namespace PM
         std::array<JsonResource, 2> getResources() const;
         bool getLastModifiedResourceIndex() const;
 
+        CachedValue<bool> m_cachedLastModifiedResourceIndex;
         std::array<JsonResource, 2> m_resources;
     };
 }

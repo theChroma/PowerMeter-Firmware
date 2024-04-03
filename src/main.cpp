@@ -7,6 +7,7 @@
 #include "ExceptionTrace/ExceptionTrace.h"
 #include "MeasuringUnit/MeasuringUnit.h"
 #include "JsonResource/BackedUpJsonResource/BackedUpJsonResource.h"
+#include "ScopeProfiler/ScopeProfiler.h"
 #include "FileBrowser/FileBrowser.h"
 #include "RestAPI/RestAPI.h"
 #include "Rtos/Rtos.h"
@@ -68,14 +69,13 @@ void measure(void* context)
     {
         MeasuringContext& measuringContext = *static_cast<MeasuringContext*>(context);
         measuringContext.measurement = measuringContext.measuringUnit.get().measure();
-
-        Logger[LogLevel::Debug] << "Tracker Access locked" << std::endl;
-        // Rtos::trackerAccess.lock();
-        for (auto& tracker : measuringContext.trackers)
-            tracker.second.track(measuringContext.measurement.get().getTrackerValue());
-        // Rtos::trackerAccess.unlock();
-        Logger[LogLevel::Debug] << "Tracker Access unlocked" << std::endl;
-
+        {
+            // ScopeProfiler profiler("Tracking");
+            Rtos::trackerAccess.lock();
+            for (auto& tracker : measuringContext.trackers)
+                tracker.second.track(measuringContext.measurement.get().getTrackerValue());
+            Rtos::trackerAccess.unlock();
+        }
         delay(500);
     }
     catch(...)

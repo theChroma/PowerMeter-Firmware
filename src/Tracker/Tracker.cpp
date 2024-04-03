@@ -45,7 +45,6 @@ void Tracker::track(float value)
         if(secondsSinceLastInput <= 0)
             return;
 
-        Logger[LogLevel::Debug] << m_title << ", now: " << now << ", lastInputTimestamp: " << lastInputTimestamp << ", secondsSinceLastInput: " << secondsSinceLastInput << std::endl;
         m_lastInputResource->serialize(now);
         m_accumulator.add(value, secondsSinceLastInput);
 
@@ -137,7 +136,6 @@ void Tracker::updateData(const std::vector<float>& newValues)
             throw std::runtime_error(SOURCE_LOCATION + "Too many values");
         }
 
-        Logger[LogLevel::Debug] << "updating data to " << values << std::endl;
         m_dataResource->serialize(values);
         m_lastSampleResource->serialize(m_clock.now());
     }

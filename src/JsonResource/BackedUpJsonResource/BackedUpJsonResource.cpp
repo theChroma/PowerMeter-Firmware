@@ -13,10 +13,7 @@ using namespace PM;
 
 namespace
 {
-    std::unordered_map<std::string, bool> lastModifiedResourceIndices;
-
-
-    time_t getLastModificationTime(const JsonResource& resource)
+    time_t readLastModificationTime(const JsonResource& resource)
     {
         File file = LittleFS.open(resource.getFilePath().c_str());
         time_t lastModificationTime = file ? file.getLastWrite() : 0;
@@ -29,7 +26,7 @@ namespace
     {
         time_t now = 0;
         time(&now);
-        time_t lastModificationTime = getLastModificationTime(resource);
+        time_t lastModificationTime = readLastModificationTime(resource);
         // If last modification time is in future...
         if (lastModificationTime > now)
         {
@@ -40,17 +37,8 @@ namespace
 }
 
 
-BackedUpJsonResource::BackedUpJsonResource(const std::string& filePath, const json::json_pointer& jsonPointer, bool useCaching) noexcept :
-    JsonResource(filePath, jsonPointer, useCaching),
-    m_resources(getResources())
-{
-    correctLastModificationTime(m_resources[0]);
-    correctLastModificationTime(m_resources[1]);
-}
-
-
-BackedUpJsonResource::BackedUpJsonResource(const std::string& uri, bool useCaching) :
-    JsonResource(uri, useCaching),
+BackedUpJsonResource::BackedUpJsonResource(const std::string& filePath, bool useCaching) noexcept :
+    JsonResource(filePath, useCaching),
     m_resources(getResources())
 {
     correctLastModificationTime(m_resources[0]);
@@ -63,10 +51,6 @@ json BackedUpJsonResource::deserialize() const
     try
     {
         bool preferredResourceIndex = getLastModifiedResourceIndex();
-        if (getFilePath() == "/Trackers/3600_60/timestamps.json" || getFilePath() == "/Trackers/604800_7/timestamps.json")
-        {
-            Logger[LogLevel::Debug] << '"' << *this << "\" deserailized from \"" << m_resources[preferredResourceIndex] << '"' << std::endl;
-        }
         return m_resources[preferredResourceIndex].deserializeOrGet([this, preferredResourceIndex]{
             return m_resources[!preferredResourceIndex].deserializeOrGet([this]{
                 return JsonResource::deserialize();
@@ -85,12 +69,8 @@ void BackedUpJsonResource::serialize(const json &data)
     try
     {
         bool resourceIndex = !getLastModifiedResourceIndex();
-        if (getFilePath() == "/Trackers/3600_60/timestamps.json" || getFilePath() == "/Trackers/604800_7/timestamps.json")
-        {
-            Logger[LogLevel::Debug] << '"' << *this << "\" serailized to \"" << m_resources[resourceIndex] << '"' << std::endl;
-        }
         m_resources[resourceIndex].serialize(data);
-        lastModifiedResourceIndices[getFilePath()] = resourceIndex;
+        m_cachedLastModifiedResourceIndex = resourceIndex;
     }
     catch(...)
     {
@@ -124,27 +104,20 @@ std::array<JsonResource, 2> BackedUpJsonResource::getResources() const
         fileExtensionIndex = filePath.length() - 1;
 
     return {
-        JsonResource(std::string(filePath).insert(fileExtensionIndex, ".a"), getJsonPointer(), false),
-        JsonResource(std::string(filePath).insert(fileExtensionIndex, ".b"), getJsonPointer(), false),
+        JsonResource(std::string(filePath).insert(fileExtensionIndex, ".a"), false),
+        JsonResource(std::string(filePath).insert(fileExtensionIndex, ".b"), false),
     };
 }
 
 
 bool BackedUpJsonResource::getLastModifiedResourceIndex() const
 {
-    try
-    {
-        return lastModifiedResourceIndices.at(getFilePath());
-    }
-    catch(std::out_of_range)
-    {
-        ExceptionTrace::clear();
+    return m_cachedLastModifiedResourceIndex.getCached([this]{
         time_t lastModificationTimes[2] = {
-            getLastModificationTime(m_resources[0]),
-            getLastModificationTime(m_resources[1]),
+            readLastModificationTime(m_resources[0]),
+            readLastModificationTime(m_resources[1]),
         };
         bool lastModifiedResourceIndex = lastModificationTimes[0] <= lastModificationTimes[1];
-        lastModifiedResourceIndices[getFilePath()] = lastModifiedResourceIndex;
         return lastModifiedResourceIndex;
-    }
+    });
 }

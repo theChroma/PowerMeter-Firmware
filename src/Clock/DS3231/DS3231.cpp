@@ -31,7 +31,6 @@ DS3231::DS3231(const json &configJson)
         }
         time_t sysNow;
         time(&sysNow);
-        Logger[LogLevel::Debug] << "Now: " << sysNow << std::endl;
         Logger[LogLevel::Info] << "Configured DS3231 clock sucessfully." << std::endl;
     }
     catch (...)
