@@ -1,6 +1,8 @@
 #include "Tracker.h"
 #include "SourceLocation/SourceLocation.h"
 #include "ExceptionTrace/ExceptionTrace.h"
+#include "Logger/Logger.h"
+#include "ScopeProfiler/ScopeProfiler.h"
 
 #include <math.h>
 #include <sstream>
@@ -12,9 +14,9 @@ Tracker::Tracker(
     time_t duration_s,
     size_t sampleCount,
     const Clock& clock,
-    const JsonResource& dataResource,
-    const JsonResource& lastInputResource,
-    const JsonResource& lastSampleResource,
+    std::shared_ptr<JsonResource> dataResource,
+    std::shared_ptr<JsonResource> lastInputResource,
+    std::shared_ptr<JsonResource> lastSampleResource,
     const AverageAccumulator& accumulator
 ) noexcept :
     m_title(title),
@@ -30,32 +32,35 @@ Tracker::Tracker(
 
 void Tracker::track(float value)
 {
+    // ScopeProfiler profiler(m_title);
     try
     {
         if(!isfinite(value))
             value = 0.0f;
 
+        time_t now = m_clock.now();
         time_t lastInputTimestamp = getTimestamp(m_lastInputResource);
-        time_t secondsSinceLastInput = m_clock.now() - lastInputTimestamp;
+        time_t secondsSinceLastInput = now - lastInputTimestamp;
 
         if(secondsSinceLastInput <= 0)
             return;
 
-        for(size_t i = 0; i < secondsSinceLastInput; i++)
-        {
-            m_lastInputResource.serialize(m_clock.now());
-            m_accumulator.add(value);
-        }
+        Logger[LogLevel::Debug] << m_title << ", now: " << now << ", lastInputTimestamp: " << lastInputTimestamp << ", secondsSinceLastInput: " << secondsSinceLastInput << std::endl;
+        m_lastInputResource->serialize(now);
+        m_accumulator.add(value, secondsSinceLastInput);
 
         time_t lastSampleTimestamp = getTimestamp(m_lastSampleResource);
-        uint32_t timesElapsed = (m_clock.now() - lastSampleTimestamp) / (m_duration_s / m_sampleCount);
+        uint32_t timesElapsed = (now - lastSampleTimestamp) / (m_duration_s / m_sampleCount);
 
         if(timesElapsed > 0)
         {
-            for(size_t i = 0; i < timesElapsed - 1; i++)
-                updateData(NAN);
+            // Avoid extremely many newValues after long power off period
+            if (timesElapsed > m_sampleCount)
+                timesElapsed = m_sampleCount;
 
-            updateData(m_accumulator.getAverage());
+            std::vector<float> newValues(timesElapsed - 1, NAN); // Fill values with null while PowerMeter was off
+            newValues.push_back(m_accumulator.getAverage());
+            updateData(newValues);
             m_accumulator.reset();
         }
     }
@@ -77,15 +82,7 @@ json Tracker::getData() const
         data["title"] = m_title;
         data["sampleCount"] = m_sampleCount;
         data["duration_s"] = m_duration_s;
-        try
-        {
-            data["data"] = m_dataResource.deserialize();
-        }
-        catch(...)
-        {
-            ExceptionTrace::clear();
-            data["data"] = json::array_t();
-        }
+        data["data"] = m_dataResource->deserializeOr(json());
         return data;
     }
     catch(...)
@@ -102,7 +99,7 @@ void Tracker::setData(const json& data)
 {
     try
     {
-        m_dataResource.serialize(data.at("data"));
+        m_dataResource->serialize(data.at("data"));
     }
     catch(...)
     {
@@ -116,54 +113,54 @@ void Tracker::setData(const json& data)
 
 void Tracker::erase()
 {
-    m_dataResource.erase();
-    m_lastInputResource.erase();
-    m_lastSampleResource.erase();
+    m_dataResource->erase();
+    m_lastInputResource->erase();
+    m_lastSampleResource->erase();
     m_accumulator.erase();
 }
 
 
-void Tracker::updateData(float value)
+void Tracker::updateData(const std::vector<float>& newValues)
 {
     try
     {
-        json values;
-        try
-        {
-            values = m_dataResource.deserialize();
-        }
-        catch(...)
-        {
-            ExceptionTrace::clear();
-        }
-        values.push_back(value);
+        json values = m_dataResource->deserializeOr(json::array_t());
+
+        for (const auto& value : newValues)
+            values.push_back(value);
 
         if(values.size() > m_sampleCount)
-            values.erase(values.begin());
+            values.erase(values.begin(), values.begin() + values.size() - m_sampleCount);
 
-        m_dataResource.serialize(values);
-        m_lastSampleResource.serialize(m_clock.now());
+        if (values.size() > m_sampleCount)
+        {
+            throw std::runtime_error(SOURCE_LOCATION + "Too many values");
+        }
+
+        Logger[LogLevel::Debug] << "updating data to " << values << std::endl;
+        m_dataResource->serialize(values);
+        m_lastSampleResource->serialize(m_clock.now());
     }
     catch(...)
     {
         std::stringstream errorMessage;
-        errorMessage << SOURCE_LOCATION << "Failed to update Data " << value;
+        errorMessage << SOURCE_LOCATION << "Failed to update Data with " << json(newValues);
         ExceptionTrace::trace(errorMessage.str());
         throw;
     }
 }
 
 
-time_t Tracker::getTimestamp(const JsonResource& timestampResource) const
+time_t Tracker::getTimestamp(std::shared_ptr<JsonResource> timestampResource) const
 {
     try
     {
-        return timestampResource.deserialize();
+        return timestampResource->deserialize();
     }
     catch(...)
     {
         ExceptionTrace::clear();
-        timestampResource.serialize(m_clock.now());
+        timestampResource->serialize(m_clock.now());
         return m_clock.now();
     }
 }

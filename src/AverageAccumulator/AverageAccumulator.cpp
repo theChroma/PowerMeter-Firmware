@@ -1,72 +1,85 @@
 #include "AverageAccumulator.h"
+#include "ScopeProfiler/ScopeProfiler.h"
+#include "ExceptionTrace/ExceptionTrace.h"
+#include "SourceLocation/SourceLocation.h"
 
-using PM::AverageAccumulator;
+using namespace PM;
 
-AverageAccumulator::AverageAccumulator(const JsonResource& storageResource) : m_storageResource(storageResource)
+
+AverageAccumulator::AverageAccumulator(std::shared_ptr<JsonResource> storageResource) :
+    m_storageResource(storageResource)
 {}
 
 
-float AverageAccumulator::add(float value)
+float AverageAccumulator::add(float value, size_t count)
 {
-    deserialize();
-    m_sum += value;
-    m_count++;
-    serialize();
-    if(m_count == 0.0f)
-        return 0.0f;
-    return m_sum / m_count;
+    try
+    {
+        Values values = deserialize();
+        values.sum += value * count;
+        values.count += count;
+        serialize(values);
+        return calculateAverage(values);
+    }
+    catch (...)
+    {
+        ExceptionTrace::trace(SOURCE_LOCATION + "Failed to add to AverageAccumulator");
+        throw;
+    }
 }
 
 
-float AverageAccumulator::getAverage()
+float AverageAccumulator::getAverage() const noexcept
 {
-    deserialize();
-    if(m_count == 0.0f)
-        return 0.0f;
-    return m_sum / m_count;
+    Values values = deserialize();
+    return calculateAverage(values);
 }
 
 
-size_t AverageAccumulator::getCount()
+size_t AverageAccumulator::getCount() const noexcept
 {
-    deserialize();
-    return m_count;
+    return deserialize().count;
 }
 
 
 void AverageAccumulator::reset()
 {
-    m_count = 0;
-    m_sum = 0.0f;
-    serialize();
+    serialize(Values(0, 0.0f));
 }
 
 
-void AverageAccumulator::erase() const
+void AverageAccumulator::erase()
 {
-    m_storageResource.erase();
+    m_storageResource->erase();
 }
 
 
-void AverageAccumulator::serialize()
+void AverageAccumulator::serialize(const Values& values)
 {
     json data;
-    data["count"] = m_count;
-    data["sum"] = m_sum;
-    m_storageResource.serialize(data);
+    data["count"] = values.count;
+    data["sum"] = values.sum;
+    m_storageResource->serialize(data);
 }
 
 
-void AverageAccumulator::deserialize()
+AverageAccumulator::Values AverageAccumulator::deserialize() const noexcept
 {
     try
     {
-        json data = m_storageResource.deserialize();
-        m_count = data.at("count");
-        m_sum = data.at("sum");
+        json data = m_storageResource->deserialize();
+        return Values(data.at("count"), data.at("sum"));
     }
-    catch(const std::exception& exception)
+    catch (...)
     {
-        reset();
+        return Values(0, 0.0f);
     }
+}
+
+
+float AverageAccumulator::calculateAverage(const Values &values) const noexcept
+{
+    if(values.count == 0)
+        return 0.0f;
+    return values.sum / values.count;
 }

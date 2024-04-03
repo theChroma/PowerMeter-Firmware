@@ -11,7 +11,7 @@ using namespace PM;
 
 namespace
 {
-    const JsonResource stateResource("/Relay/State.json");
+    JsonResource stateResource("/Relay/State.json");
 }
 
 Relay::Relay(const json &configJson)
@@ -20,17 +20,7 @@ Relay::Relay(const json &configJson)
     {
         m_pin = configJson.at("pin");
         m_isNormallyOpen = configJson.at("isNormallyOpen");
-
-        bool state = false;
-        try
-        {
-            state = stateResource.deserialize();
-        }
-        catch (...)
-        {
-            ExceptionTrace::clear();
-        }
-
+        bool state = stateResource.deserializeOr(false);
         pinMode(m_pin, OUTPUT);
         digitalWrite(m_pin,  m_isNormallyOpen ? state : !state);
         Logger[LogLevel::Info] << "Relay configured sucessfully." << std::endl;

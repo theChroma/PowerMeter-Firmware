@@ -190,10 +190,20 @@ TrackerMap Config::configureTrackers(const JsonResource& configResource, std::re
                 trackerJson.value().at("duration_s"),
                 trackerJson.value().at("sampleCount"),
                 clock,
-                JsonResource(trackerDirectory.str() + "data.json"),
-                JsonResource(trackerDirectory.str() + "timestamps.json#/lastInput"),
-                JsonResource(trackerDirectory.str() + "timestamps.json#/lastSample"),
-                AverageAccumulator(JsonResource(trackerDirectory.str() + "accumulator.json"))
+                std::shared_ptr<BackedUpJsonResource>(
+                    new BackedUpJsonResource(trackerDirectory.str() + "data.json")
+                ),
+                std::shared_ptr<BackedUpJsonResource>(
+                    new BackedUpJsonResource(trackerDirectory.str() + "lastInputTimestamp.json")
+                ),
+                std::shared_ptr<BackedUpJsonResource>(
+                    new BackedUpJsonResource(trackerDirectory.str() + "lastSampleTimestamp.json")
+                ),
+                AverageAccumulator(
+                    std::shared_ptr<BackedUpJsonResource>(
+                        new BackedUpJsonResource(trackerDirectory.str() + "accumulator.json")
+                    )
+                )
             ));
         }
         Logger[LogLevel::Info] << "Trackers configured sucessfully." << std::endl;
@@ -207,7 +217,7 @@ TrackerMap Config::configureTrackers(const JsonResource& configResource, std::re
 }
 
 
-void Config::configureNetwork(const JsonResource &configResource)
+void Config::configureNetwork(JsonResource &configResource)
 {
     try
     {

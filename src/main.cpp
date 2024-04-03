@@ -9,6 +9,7 @@
 #include "JsonResource/BackedUpJsonResource/BackedUpJsonResource.h"
 #include "FileBrowser/FileBrowser.h"
 #include "RestAPI/RestAPI.h"
+#include "Rtos/Rtos.h"
 #include "esp32/rom/rtc.h"
 #include <tuple>
 #include <LittleFS.h>
@@ -68,8 +69,12 @@ void measure(void* context)
         MeasuringContext& measuringContext = *static_cast<MeasuringContext*>(context);
         measuringContext.measurement = measuringContext.measuringUnit.get().measure();
 
+        Logger[LogLevel::Debug] << "Tracker Access locked" << std::endl;
+        // Rtos::trackerAccess.lock();
         for (auto& tracker : measuringContext.trackers)
             tracker.second.track(measuringContext.measurement.get().getTrackerValue());
+        // Rtos::trackerAccess.unlock();
+        Logger[LogLevel::Debug] << "Tracker Access unlocked" << std::endl;
 
         delay(500);
     }
@@ -91,12 +96,12 @@ void setup()
         if (!LittleFS.begin(true, "", 30))
             throw std::runtime_error("Failed to mount Filesystem");
 
-        static const BackedUpJsonResource switchConfigResource("/Config/Switch.json");
-        static const BackedUpJsonResource loggerConfigResource("/Config/Logger.json");
-        static const BackedUpJsonResource networkConfigResource("/Config/Network.json");
-        static const BackedUpJsonResource measuringConfigResource("/Config/Measuring.json");
-        static const BackedUpJsonResource clockConfigResource("/Config/Clock.json");
-        static const BackedUpJsonResource trackerConfigResource("/Config/Trackers.json");
+        static BackedUpJsonResource switchConfigResource("/Config/Switch.json");
+        static BackedUpJsonResource loggerConfigResource("/Config/Logger.json");
+        static BackedUpJsonResource networkConfigResource("/Config/Network.json");
+        static BackedUpJsonResource measuringConfigResource("/Config/Measuring.json");
+        static BackedUpJsonResource clockConfigResource("/Config/Clock.json");
+        static BackedUpJsonResource trackerConfigResource("/Config/Trackers.json");
 
 
         static AsyncWebServer server(80);

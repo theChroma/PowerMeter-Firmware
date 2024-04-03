@@ -4,6 +4,7 @@
 #include "JsonResource/JsonResource.h"
 #include "AverageAccumulator/AverageAccumulator.h"
 #include <unordered_map>
+#include <memory>
 
 namespace PM
 {
@@ -15,9 +16,9 @@ namespace PM
             time_t duration_s,
             size_t sampleCount,
             const Clock& clock,
-            const JsonResource& dataResource,
-            const JsonResource& lastInputResource,
-            const JsonResource& lastSampleResource,
+            std::shared_ptr<JsonResource> dataResource,
+            std::shared_ptr<JsonResource> lastInputResource,
+            std::shared_ptr<JsonResource> lastSampleResource,
             const AverageAccumulator& accumulator
         ) noexcept;
         void track(float value);
@@ -26,16 +27,16 @@ namespace PM
         void erase();
 
     private:
-        void updateData(float value);
-        time_t getTimestamp(const JsonResource& timestampResource) const;
+        void updateData(const std::vector<float>& newValues);
+        time_t getTimestamp(std::shared_ptr<JsonResource> timestampResource) const;
 
         std::string m_title;
         time_t m_duration_s;
         size_t m_sampleCount;
         const Clock& m_clock;
-        JsonResource m_dataResource;
-        JsonResource m_lastInputResource;
-        JsonResource m_lastSampleResource;
+        std::shared_ptr<JsonResource> m_dataResource;
+        std::shared_ptr<JsonResource> m_lastInputResource;
+        std::shared_ptr<JsonResource> m_lastSampleResource;
         AverageAccumulator m_accumulator;
     };
 

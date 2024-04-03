@@ -13,14 +13,13 @@ namespace PM
     public:
         Api(RestAPI& api);
         void createSystemEndpoints(const Version& firmwareVersion, const Version& apiVersion);
-        void createLoggerEndpoints(const JsonResource &configResource, AsyncWebServer &server);
-        void createSwitchEndpoints(const JsonResource& configResource, std::reference_wrapper<Switch>& switchUnit);
-        void createClockEndpoints(const JsonResource& configResource, std::reference_wrapper<Clock>& clock);
-        void createTrackerEndpoints(const JsonResource& configResource, TrackerMap& trackers, Clock& clock);
-        void createWiFiEndpoints(const JsonResource& configResource);
-        void createNetworkEndpoints(const JsonResource& configResource);
+        void createLoggerEndpoints(JsonResource& configResource, AsyncWebServer &server);
+        void createSwitchEndpoints(JsonResource& configResource, std::reference_wrapper<Switch>& switchUnit);
+        void createClockEndpoints(JsonResource& configResource, std::reference_wrapper<Clock>& clock);
+        void createTrackerEndpoints(JsonResource& configResource, TrackerMap& trackers, Clock& clock);
+        void createNetworkEndpoints(JsonResource& configResource);
         void createMeasuringEndpoints(
-            const JsonResource& configResource,
+            JsonResource& configResource,
             std::reference_wrapper<MeasuringUnit>& measuringUnit,
             std::reference_wrapper<Measurement>& measurement
         );

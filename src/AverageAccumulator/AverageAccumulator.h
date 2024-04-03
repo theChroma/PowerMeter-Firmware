@@ -1,25 +1,32 @@
 #pragma once
 
 #include "JsonResource/JsonResource.h"
+#include <memory>
 
 namespace PM
 {
     class AverageAccumulator
     {
     public:
-        AverageAccumulator(const JsonResource& storageResource);
-        float getAverage();
-        size_t getCount();
-        float add(float value);
+        AverageAccumulator(std::shared_ptr<JsonResource> storageResource);
+        float getAverage() const noexcept;
+        size_t getCount() const noexcept;
+        float add(float value, size_t count = 1);
         void reset();
-        void erase() const;
+        void erase();
 
     private:
-        void deserialize();
-        void serialize();
+        struct Values
+        {
+            Values(size_t count, float sum) : count(count), sum(sum) {}
+            size_t count;
+            float sum;
+        };
 
-        size_t m_count = 0;
-        float m_sum = 0.0f;
-        JsonResource m_storageResource;
+        void serialize(const Values& values);
+        Values deserialize() const noexcept;
+        float calculateAverage(const Values& values) const noexcept;
+
+        std::shared_ptr<JsonResource> m_storageResource;
     };
 }

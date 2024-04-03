@@ -1,6 +1,8 @@
 #include "BackedUpJsonResource.h"
 #include "ExceptionTrace/ExceptionTrace.h"
+#include "SourceLocation/SourceLocation.h"
 #include "Logger/Logger.h"
+#include "ScopeProfiler/ScopeProfiler.h"
 #include <string>
 #include <LittleFS.h>
 #include <sys/time.h>
@@ -19,7 +21,6 @@ namespace
         File file = LittleFS.open(resource.getFilePath().c_str());
         time_t lastModificationTime = file ? file.getLastWrite() : 0;
         file.close();
-        Logger[LogLevel::Debug] << '"' << resource.getFilePath() << "\" was modified at " << lastModificationTime << std::endl;
         return lastModificationTime;
     }
 
@@ -33,22 +34,14 @@ namespace
         if (lastModificationTime > now)
         {
             // Set last modification time to now
-            Logger[LogLevel::Info]
-                << "Setting last modification time of \""
-                << resource << "\" from "
-                << lastModificationTime
-                << " to "
-                << now
-                << std::endl;
-
             std::ofstream file(resource.getFilePath(), std::ios::app);
         }
     }
 }
 
 
-BackedUpJsonResource::BackedUpJsonResource(const std::string& filePath, const json::json_pointer& jsonPointer) noexcept :
-    JsonResource(filePath, jsonPointer),
+BackedUpJsonResource::BackedUpJsonResource(const std::string& filePath, const json::json_pointer& jsonPointer, bool useCaching) noexcept :
+    JsonResource(filePath, jsonPointer, useCaching),
     m_resources(getResources())
 {
     correctLastModificationTime(m_resources[0]);
@@ -56,8 +49,8 @@ BackedUpJsonResource::BackedUpJsonResource(const std::string& filePath, const js
 }
 
 
-BackedUpJsonResource::BackedUpJsonResource(const std::string& uri) :
-    JsonResource(uri),
+BackedUpJsonResource::BackedUpJsonResource(const std::string& uri, bool useCaching) :
+    JsonResource(uri, useCaching),
     m_resources(getResources())
 {
     correctLastModificationTime(m_resources[0]);
@@ -67,52 +60,59 @@ BackedUpJsonResource::BackedUpJsonResource(const std::string& uri) :
 
 json BackedUpJsonResource::deserialize() const
 {
-    bool preferredResourceIndex = getLastModifiedResourceIndex();
     try
     {
-        try
+        bool preferredResourceIndex = getLastModifiedResourceIndex();
+        if (getFilePath() == "/Trackers/3600_60/timestamps.json" || getFilePath() == "/Trackers/604800_7/timestamps.json")
         {
-            return m_resources[preferredResourceIndex].deserialize();
+            Logger[LogLevel::Debug] << '"' << *this << "\" deserailized from \"" << m_resources[preferredResourceIndex] << '"' << std::endl;
         }
-        catch (...)
-        {
-            ExceptionTrace::clear();
-            Logger[LogLevel::Warning]
-                << "Failed to deserialize \""
-                << m_resources[preferredResourceIndex]
-                << "\". Using \""
-                << m_resources[!preferredResourceIndex]
-                << "\" as fallback."
-                << std::endl;
-            return m_resources[!preferredResourceIndex].deserialize();
-        }
+        return m_resources[preferredResourceIndex].deserializeOrGet([this, preferredResourceIndex]{
+            return m_resources[!preferredResourceIndex].deserializeOrGet([this]{
+                return JsonResource::deserialize();
+            });
+        });
     }
     catch(...)
     {
-        ExceptionTrace::clear();
-        Logger[LogLevel::Warning]
-                << "Failed to deserialize \""
-                << m_resources[!preferredResourceIndex]
-                << "\". Using \""
-                << *this
-                << "\" as fallback."
-                << std::endl;
-        return JsonResource::deserialize();
+        ExceptionTrace::trace(SOURCE_LOCATION + "Failed to deserialize \"" + std::string(*this) + "\"");
+        throw;
     }
 }
 
-void BackedUpJsonResource::serialize(const json &data) const
+void BackedUpJsonResource::serialize(const json &data)
 {
-    bool resourceIndex = !getLastModifiedResourceIndex();
-    m_resources[resourceIndex].serialize(data);
+    try
+    {
+        bool resourceIndex = !getLastModifiedResourceIndex();
+        if (getFilePath() == "/Trackers/3600_60/timestamps.json" || getFilePath() == "/Trackers/604800_7/timestamps.json")
+        {
+            Logger[LogLevel::Debug] << '"' << *this << "\" serailized to \"" << m_resources[resourceIndex] << '"' << std::endl;
+        }
+        m_resources[resourceIndex].serialize(data);
+        lastModifiedResourceIndices[getFilePath()] = resourceIndex;
+    }
+    catch(...)
+    {
+        ExceptionTrace::trace(SOURCE_LOCATION + "Failed to serialize \"" + std::string(*this) + "\"");
+        throw;
+    }
 }
 
 
-void BackedUpJsonResource::erase() const
+void BackedUpJsonResource::erase()
 {
-    m_resources[0].erase();
-    m_resources[1].erase();
-    JsonResource::erase();
+    try
+    {
+        m_resources[0].erase();
+        m_resources[1].erase();
+        JsonResource::erase();
+    }
+    catch(...)
+    {
+        ExceptionTrace::trace(SOURCE_LOCATION + "Failed to erase \"" + std::string(*this) + "\"");
+        throw;
+    }
 }
 
 
@@ -124,8 +124,8 @@ std::array<JsonResource, 2> BackedUpJsonResource::getResources() const
         fileExtensionIndex = filePath.length() - 1;
 
     return {
-        JsonResource(std::string(filePath).insert(fileExtensionIndex, ".a"), getJsonPointer()),
-        JsonResource(std::string(filePath).insert(fileExtensionIndex, ".b"), getJsonPointer()),
+        JsonResource(std::string(filePath).insert(fileExtensionIndex, ".a"), getJsonPointer(), false),
+        JsonResource(std::string(filePath).insert(fileExtensionIndex, ".b"), getJsonPointer(), false),
     };
 }
 

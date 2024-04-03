@@ -17,6 +17,6 @@ namespace PM
         std::reference_wrapper<Clock> configureClock(const JsonResource& configResource);
         std::reference_wrapper<Switch> configureSwitch(const JsonResource& configResource);
         TrackerMap configureTrackers(const JsonResource& configResource, std::reference_wrapper<Clock> clock);
-        void configureNetwork(const JsonResource& configResource);
+        void configureNetwork(JsonResource& configResource);
     }
 }

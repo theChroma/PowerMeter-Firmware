@@ -5,6 +5,7 @@
 #include "Logger/Logger.h"
 #include "ExceptionTrace/ExceptionTrace.h"
 #include "SourceLocation/SourceLocation.h"
+#include "Rtos/Rtos.h"
 #include <WiFi.h>
 #include <LittleFS.h>
 #include <functional>
@@ -13,13 +14,13 @@ using namespace PM;
 
 namespace
 {
-    RestAPI::JsonResponse handleGetJsonResource(const JsonResource& jsonResource)
+    RestAPI::JsonResponse handleGetJsonResource(JsonResource& jsonResource)
     {
         return RestAPI::JsonResponse(jsonResource.deserialize());
     }
 
 
-    RestAPI::JsonResponse handlePutJsonResource(const JsonResource& jsonResource, const json& requestJson)
+    RestAPI::JsonResponse handlePutJsonResource(JsonResource& jsonResource, const json& requestJson)
     {
         jsonResource.serialize(requestJson);
         return jsonResource.deserialize();
@@ -47,7 +48,7 @@ namespace
         }
     }
 
-    RestAPI::JsonResponse handlePatchJsonResource(const JsonResource& jsonResource, const json& requestJson, bool allowAdding = false)
+    RestAPI::JsonResponse handlePatchJsonResource(JsonResource& jsonResource, const json& requestJson, bool allowAdding = false)
     {
         json storedJson = jsonResource.deserialize();
         size_t sizeBefore = getJsonSizeRecursive(storedJson);
@@ -98,7 +99,7 @@ void Api::createSystemEndpoints(const Version& firmwareVersion, const Version& a
 }
 
 
-void Api::createLoggerEndpoints(const JsonResource& configResource, AsyncWebServer& server)
+void Api::createLoggerEndpoints(JsonResource& configResource, AsyncWebServer& server)
 {
     m_restApi.handle("/logger/config", HTTP_GET, [&configResource](json, Version){
         return handleGetJsonResource(configResource);
@@ -112,7 +113,7 @@ void Api::createLoggerEndpoints(const JsonResource& configResource, AsyncWebServ
 
 
 void Api::createMeasuringEndpoints(
-    const JsonResource& configResource,
+    JsonResource& configResource,
     std::reference_wrapper<MeasuringUnit>& measuringUnit,
     std::reference_wrapper<Measurement>& measurement
 )
@@ -131,7 +132,7 @@ void Api::createMeasuringEndpoints(
 }
 
 
-void Api::createSwitchEndpoints(const JsonResource& configResource, std::reference_wrapper<Switch>& switchUnit)
+void Api::createSwitchEndpoints(JsonResource& configResource, std::reference_wrapper<Switch>& switchUnit)
 {
     m_restApi.handle("/switch", HTTP_GET, [&switchUnit](json, Version){
         json responseJson;
@@ -159,7 +160,7 @@ void Api::createSwitchEndpoints(const JsonResource& configResource, std::referen
 }
 
 
-void Api::createClockEndpoints(const JsonResource& configResource, std::reference_wrapper<Clock>& clock)
+void Api::createClockEndpoints(JsonResource& configResource, std::reference_wrapper<Clock>& clock)
 {
     m_restApi.handle("/clock/config", HTTP_GET, [&configResource](json, Version){
         return handleGetJsonResource(configResource);
@@ -172,13 +173,12 @@ void Api::createClockEndpoints(const JsonResource& configResource, std::referenc
 }
 
 
-void Api::createTrackerEndpoints(const JsonResource& configResource, TrackerMap& trackers, Clock& clock)
+void Api::createTrackerEndpoints(JsonResource& configResource, TrackerMap& trackers, Clock& clock)
 {
     m_restApi.handle("/trackers", HTTP_GET, [&trackers](json, Version){
         json responseJson = json::object_t();
         for(const auto& tracker : trackers)
             responseJson[tracker.first] = tracker.second.getData();
-
         return RestAPI::JsonResponse(responseJson);
     });
     m_restApi.handle("/trackers", HTTP_PUT, [&trackers](const json& requestJson, Version){
@@ -199,6 +199,7 @@ void Api::createTrackerEndpoints(const JsonResource& configResource, TrackerMap&
         return handleGetJsonResource(configResource);
     });
     m_restApi.handle("/trackers/config", HTTP_POST, [&configResource, &trackers, &clock](const json& requestJson, Version){
+        std::lock_guard<std::mutex> lock(Rtos::trackerAccess);
         json configJson = configResource.deserialize();
         std::stringstream key;
         key << requestJson.at("duration_s") << "_" << requestJson.at("sampleCount");
@@ -215,7 +216,8 @@ void Api::createTrackerEndpoints(const JsonResource& configResource, TrackerMap&
         m_restApi.handle(
             std::string("/trackers/config/") + key,
             HTTP_DELETE,
-            [key, configResource, &trackers, &clock](json, Version){
+            [key, &configResource, &trackers, &clock](json, Version){
+                std::lock_guard<std::mutex> lock(Rtos::trackerAccess);
                 json configJson = configResource.deserialize();
                 trackers.at(key).erase();
                 trackers.erase(key);
@@ -229,7 +231,7 @@ void Api::createTrackerEndpoints(const JsonResource& configResource, TrackerMap&
 }
 
 
-void Api::createNetworkEndpoints(const JsonResource &configResource)
+void Api::createNetworkEndpoints(JsonResource &configResource)
 {
     m_restApi.handle("/network/config", HTTP_GET, [&configResource](json, Version){
         RestAPI::JsonResponse response = handleGetJsonResource(configResource);
