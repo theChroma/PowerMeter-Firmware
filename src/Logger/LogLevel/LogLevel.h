@@ -10,8 +10,8 @@ namespace PM
         {
             Error = 0,
             Warning = 1,
-            Debug = 2,
-            Info = 3,
+            Info = 2,
+            Debug = 3,
             Verbose = 4,
         };
 

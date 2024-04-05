@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Rtos/CpuCore/CpuCore.h"
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <functional>
@@ -10,12 +11,7 @@ namespace PM
 {
     namespace Rtos
     {
-        enum class CpuCore : int
-        {
-            Auto = tskNO_AFFINITY,
-            Core0 = 0,
-            Core1 = 1,
-        };
+
 
         class Task
         {
@@ -26,7 +22,7 @@ namespace PM
                 uint8_t priority,
                 size_t stackSize_B,
                 const Code& code,
-                CpuCore cpuCore = CpuCore::Auto
+                CpuCore executionCore = CpuCore::Auto
             );
 
             static Task getCurrent();

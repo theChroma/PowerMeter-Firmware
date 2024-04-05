@@ -14,7 +14,7 @@ Task::Task(
     uint8_t priority,
     size_t stackSize_B,
     const Code& code,
-    CpuCore cpuCore
+    CpuCore executionCore
 ) :
     m_code(code)
 {
@@ -28,7 +28,7 @@ Task::Task(
         this,
         priority,
         &handle,
-        static_cast<BaseType_t>(cpuCore)
+        static_cast<BaseType_t>(executionCore)
     );
     if (status != pdPASS)
     {
@@ -88,15 +88,7 @@ void Task::taskFunction(Task& task) noexcept
 void Task::cancelByHandle(TaskHandle_t handle) noexcept
 {
     delay(0);
-
     // It seems like a bug in FreeRTOS that we have to do "&handle" instead of "handle"
     if (eTaskGetState(&handle) != eTaskState::eDeleted)
-    {
-        Logger[LogLevel::Debug] << "Deleting task \"" << pcTaskGetName(handle) << "\"" << std::endl;
         vTaskDelete(handle);
-    }
-    else
-    {
-        Logger[LogLevel::Debug] << "Task \"" << pcTaskGetName(handle) << "\" has already been deleted" << std::endl;
-    }
 }
