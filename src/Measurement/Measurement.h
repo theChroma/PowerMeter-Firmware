@@ -1,14 +1,16 @@
 #pragma once
 
+#include <vector>
 #include <json.hpp>
 
 namespace PM
 {
-    class Measurement
+    struct Measurement
     {
-    public:
-        virtual float getTrackerValue() const = 0; 
-        virtual json toJson() const = 0; 
-        virtual ~Measurement() noexcept {};
+        json toJson() const;
+        const char* name;
+        float value;
+        const char* unit;
     };
+    using MeasurementList = std::vector<Measurement>;
 }

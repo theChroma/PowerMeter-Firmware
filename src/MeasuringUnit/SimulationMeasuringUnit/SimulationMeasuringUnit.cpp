@@ -1,14 +1,12 @@
 #ifdef ESP32
 
 #include "SimulationMeasuringUnit.h"
-#include "Measurement/AcMeasurement/AcMeasurement.h"
 #include "Logger/Logger.h"
 #include "SourceLocation/SourceLocation.h"
 #include "ExceptionTrace/ExceptionTrace.h"
+#include "AcPower/AcPower.h"
 #include <Arduino.h>
-#include <cmath>
-#include <cstdlib>
-#include <tl/optional.hpp>
+#include <math.h>
 
 using namespace PM;
 
@@ -42,16 +40,46 @@ SimulationMeasuringUnit::SimulationMeasuringUnit(const json &configJson)
 }
 
 
-Measurement& SimulationMeasuringUnit::measure() noexcept
+MeasurementList SimulationMeasuringUnit::measure() noexcept
 {
     delayMicroseconds(m_measuringRunTime_ms * 1000);
     float simulatedVoltage = randomInRange(m_minVoltage, m_maxVoltage);
     float simulatedCurrent = randomInRange(m_minCurrent, m_maxCurrent);
     float simulatedPowerFactor = randomInRange(m_minPowerFactor, m_maxPowerFactor);
     float simulatedActivePower = simulatedVoltage * simulatedCurrent * simulatedPowerFactor;
-    static tl::optional<AcMeasurement> measurement;
-    measurement.emplace(simulatedVoltage, simulatedCurrent, simulatedActivePower);
-    return measurement.value();
+    AcPower acPower(simulatedVoltage, simulatedCurrent, simulatedActivePower);
+    return MeasurementList {
+        Measurement {
+            .name = "Active Power",
+            .value = acPower.getActivePower_W(),
+            .unit = "W",
+        },
+        Measurement {
+            .name = "Apparent Power",
+            .value = acPower.getApparentPower_VA(),
+            .unit = "VA",
+        },
+        Measurement {
+            .name = "Reactive Power",
+            .value = acPower.getReactivePower_var(),
+            .unit = "var",
+        },
+        Measurement {
+            .name = "Voltage",
+            .value = acPower.getVoltage_V(),
+            .unit = "V",
+        },
+        Measurement {
+            .name = "Current",
+            .value = acPower.getCurrent_A(),
+            .unit = "A",
+        },
+        Measurement {
+            .name = "Power Factor",
+            .value = acPower.getPowerFactor(),
+            .unit = "",
+        },
+    };
 }
 
 #endif

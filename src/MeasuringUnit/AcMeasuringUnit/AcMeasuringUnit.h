@@ -1,9 +1,7 @@
 #pragma once
 
 #include "MeasuringUnit/MeasuringUnit.h"
-#include "Measurement/AcMeasurement/AcMeasurement.h"
 #include <json.hpp>
-#include <stdint.h>
 #include <EmonLib.h>
 
 namespace PM
@@ -13,8 +11,8 @@ namespace PM
     public:
         AcMeasuringUnit(const json& configJson);
 
-        Measurement& measure() noexcept;
-        
+        MeasurementList measure() noexcept;
+
     private:
         EnergyMonitor m_emon;
     };

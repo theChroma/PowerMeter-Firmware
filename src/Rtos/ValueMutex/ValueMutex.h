@@ -8,33 +8,30 @@ namespace PM
     namespace Rtos
     {
         template<typename T>
-        class DataMutex
+        class ValueMutex
         {
         public:
-            DataMutex(const T& data) :
-                m_data(data)
+            ValueMutex() = default;
+            ValueMutex(const T& data) :
+                m_value(data)
             {}
 
-            DataMutex(const DataMutex& other) = delete;
-
-            DataMutex& assign(const T& data)
+            ValueMutex& assign(const T& data)
             {
                 std::lock_guard<std::mutex> lock(m_mutex);
-                m_data = data;
+                m_value = data;
                 return *this;
             }
 
-            DataMutex& operator=(const DataMutex& other) = delete;
-
-            DataMutex& operator=(const T& data)
+            ValueMutex& operator=(const T& data)
             {
-                return assign();
+                return assign(data);
             }
 
             T get() const
             {
                 std::lock_guard<std::mutex> lock(m_mutex);
-                return m_data;
+                return m_value;
             }
 
             operator T() const
@@ -43,8 +40,8 @@ namespace PM
             }
 
         private:
-            std::mutex m_mutex;
-            T m_data;
+            mutable std::mutex m_mutex;
+            T m_value;
         };
     }
 }

@@ -1,15 +1,12 @@
 #pragma once
 
-#include "Measurement/Measurement.h"
 
 namespace PM
 {
-    class AcMeasurement : public Measurement
+    class AcPower
     {
     public:
-        AcMeasurement(float voltage_V, float current_A, float activePower_W) noexcept;
-        json toJson() const noexcept override;
-        float getTrackerValue() const noexcept override;
+        AcPower(float voltage_V, float current_A, float activePower_W) noexcept;
         float getVoltage_V() const noexcept;
         float getCurrent_A() const noexcept;
         float getActivePower_W() const noexcept;

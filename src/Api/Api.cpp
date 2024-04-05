@@ -85,7 +85,6 @@ void Api::createSystemEndpoints(const Version& firmwareVersion, const Version& a
         chipdId << std::hex << ESP.getEfuseMac();
         responseJson["chipId"] = chipdId.str();
         responseJson["uptime_s"] = millis() / 1000.0;
-        // responseJson["network"] = networkJson;
         responseJson["versions"] = versionsJson;
         responseJson["statistics"] = statisticsJson;
         return responseJson;
@@ -115,15 +114,21 @@ void Api::createLoggerEndpoints(JsonResource& configResource, AsyncWebServer& se
 void Api::createMeasuringEndpoints(
     JsonResource& configResource,
     std::reference_wrapper<MeasuringUnit>& measuringUnit,
-    std::reference_wrapper<Measurement>& measurement
+    const Rtos::ValueMutex<MeasurementList>& sharedMeasurements
 )
 {
-    m_restApi.handle("/measurement", HTTP_GET, [&measurement](json, Version){
-        return measurement.get().toJson();
+    m_restApi.handle("/measurements", HTTP_GET, [&sharedMeasurements](json, Version){
+        json responseJson = json::array_t();
+        MeasurementList measurements = sharedMeasurements.get();
+        for (const auto& measurement : measurements)
+            responseJson.push_back(measurement.toJson());
+        return responseJson;
     });
+
     m_restApi.handle("/measuring/config", HTTP_GET, [&configResource](json, Version){
         return handleGetJsonResource(configResource);
     });
+
     m_restApi.handle("/measuring/config", HTTP_PATCH, [&configResource, &measuringUnit](const json& requestJson, Version){
         RestAPI::JsonResponse response = handlePatchJsonResource(configResource, requestJson);
         measuringUnit = Config::configureMeasuringUnit(configResource);
@@ -141,6 +146,7 @@ void Api::createSwitchEndpoints(JsonResource& configResource, std::reference_wra
             responseJson = state.value();
         return responseJson;
     });
+
     m_restApi.handle("/switch", HTTP_PATCH, [&switchUnit](const json& requestJson, Version){
         switchUnit.get().setState(requestJson);
         json responseJson;
@@ -149,9 +155,11 @@ void Api::createSwitchEndpoints(JsonResource& configResource, std::reference_wra
             responseJson = state.value();
         return responseJson;
     });
+
     m_restApi.handle("/switch/config", HTTP_GET, [&configResource](json, Version){
         return handleGetJsonResource(configResource);
     });
+
     m_restApi.handle("/switch/config", HTTP_PATCH, [&configResource, &switchUnit](const json& requestJson, Version){
         RestAPI::JsonResponse response = handlePatchJsonResource(configResource, requestJson);
         switchUnit = Config::configureSwitch(configResource);
@@ -165,6 +173,7 @@ void Api::createClockEndpoints(JsonResource& configResource, std::reference_wrap
     m_restApi.handle("/clock/config", HTTP_GET, [&configResource](json, Version){
         return handleGetJsonResource(configResource);
     });
+
     m_restApi.handle("/clock/config", HTTP_PATCH, [&configResource, &clock](const json& requestJson, Version){
         RestAPI::JsonResponse response = handlePatchJsonResource(configResource, requestJson);
         clock = Config::configureClock(configResource);
@@ -173,18 +182,25 @@ void Api::createClockEndpoints(JsonResource& configResource, std::reference_wrap
 }
 
 
-void Api::createTrackerEndpoints(JsonResource& configResource, TrackerMap& trackers, Clock& clock)
+void Api::createTrackerEndpoints(
+    JsonResource& configResource,
+    Rtos::ValueMutex<TrackerMap>& sharedTrackers,
+    Clock& clock
+)
 {
-    m_restApi.handle("/trackers", HTTP_GET, [&trackers](json, Version){
+    m_restApi.handle("/trackers", HTTP_GET, [&sharedTrackers](json, Version){
+        TrackerMap trackers = sharedTrackers;
         json responseJson = json::object_t();
         for(const auto& tracker : trackers)
             responseJson[tracker.first] = tracker.second.getData();
         return RestAPI::JsonResponse(responseJson);
     });
-    m_restApi.handle("/trackers", HTTP_PUT, [&trackers](const json& requestJson, Version){
+
+    m_restApi.handle("/trackers", HTTP_PUT, [&sharedTrackers](const json& requestJson, Version){
         json responseJson = json::object_t();
         for(const auto& requestJsonItems : requestJson.items())
         {
+            TrackerMap trackers = sharedTrackers;
             const std::string& trackerId = requestJsonItems.key();
             if (trackers.find(trackerId) != trackers.end())
             {
@@ -195,17 +211,18 @@ void Api::createTrackerEndpoints(JsonResource& configResource, TrackerMap& track
         }
         return responseJson;
     });
+
     m_restApi.handle("/trackers/config", HTTP_GET, [&configResource](json, Version){
         return handleGetJsonResource(configResource);
     });
-    m_restApi.handle("/trackers/config", HTTP_POST, [&configResource, &trackers, &clock](const json& requestJson, Version){
-        std::lock_guard<std::mutex> lock(Rtos::trackerAccess);
+
+    m_restApi.handle("/trackers/config", HTTP_POST, [&configResource, &sharedTrackers, &clock](const json& requestJson, Version){
         json configJson = configResource.deserialize();
         std::stringstream key;
         key << requestJson.at("duration_s") << "_" << requestJson.at("sampleCount");
         configJson[key.str()] = requestJson;
         configResource.serialize(configJson);
-        trackers = Config::configureTrackers(configResource, clock);
+        sharedTrackers = Config::configureTrackers(configResource, clock);
         return RestAPI::JsonResponse(configJson, 201);
     });
 
@@ -216,14 +233,12 @@ void Api::createTrackerEndpoints(JsonResource& configResource, TrackerMap& track
         m_restApi.handle(
             std::string("/trackers/config/") + key,
             HTTP_DELETE,
-            [key, &configResource, &trackers, &clock](json, Version){
-                std::lock_guard<std::mutex> lock(Rtos::trackerAccess);
+            [key, &configResource, &sharedTrackers, &clock](json, Version){
                 json configJson = configResource.deserialize();
-                trackers.at(key).erase();
-                trackers.erase(key);
+                sharedTrackers.get().at(key).erase();
                 configJson.erase(key);
                 configResource.serialize(configJson);
-                trackers = Config::configureTrackers(configResource, clock);
+                sharedTrackers = Config::configureTrackers(configResource, clock);
                 return RestAPI::JsonResponse(configJson);
             }
         );
@@ -239,6 +254,7 @@ void Api::createNetworkEndpoints(JsonResource &configResource)
         response.data["acesspoint"]["macAddress"] = WiFi.softAPmacAddress().c_str();
         return response;
     });
+
     m_restApi.handle("/network/config", HTTP_PATCH, [&configResource](const json& requestJson, Version){
         RestAPI::JsonResponse response = handlePatchJsonResource(configResource, requestJson);
         response.doAfterSend = [&configResource]{

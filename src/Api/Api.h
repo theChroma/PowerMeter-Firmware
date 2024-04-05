@@ -5,6 +5,7 @@
 #include "MeasuringUnit/MeasuringUnit.h"
 #include "Switch/Switch.h"
 #include "Tracker/Tracker.h"
+#include "Rtos/ValueMutex/ValueMutex.h"
 
 namespace PM
 {
@@ -16,12 +17,16 @@ namespace PM
         void createLoggerEndpoints(JsonResource& configResource, AsyncWebServer &server);
         void createSwitchEndpoints(JsonResource& configResource, std::reference_wrapper<Switch>& switchUnit);
         void createClockEndpoints(JsonResource& configResource, std::reference_wrapper<Clock>& clock);
-        void createTrackerEndpoints(JsonResource& configResource, TrackerMap& trackers, Clock& clock);
+        void createTrackerEndpoints(
+            JsonResource& configResource,
+            Rtos::ValueMutex<TrackerMap>& sharedTrackers,
+            Clock& clock
+        );
         void createNetworkEndpoints(JsonResource& configResource);
         void createMeasuringEndpoints(
             JsonResource& configResource,
             std::reference_wrapper<MeasuringUnit>& measuringUnit,
-            std::reference_wrapper<Measurement>& measurement
+            const Rtos::ValueMutex<MeasurementList>& sharedMeasurements
         );
 
     private:

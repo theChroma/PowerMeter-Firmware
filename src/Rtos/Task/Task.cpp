@@ -10,7 +10,7 @@ using namespace PM;
 
 
 Task::Task(
-    const std::string& name,
+    const char* name,
     uint8_t priority,
     size_t stackSize_B,
     const Code& code,
@@ -23,7 +23,7 @@ Task::Task(
         [](void* context){
             taskFunction(*static_cast<Task*>(context));
         },
-        name.c_str(),
+        name,
         stackSize_B,
         this,
         priority,
@@ -52,7 +52,7 @@ Task Task::getCurrent()
 }
 
 
-std::string Task::getName() const
+const char* Task::getName() const
 {
     return pcTaskGetName(m_handle.get());
 }

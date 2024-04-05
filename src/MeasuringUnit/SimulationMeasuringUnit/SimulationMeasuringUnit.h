@@ -9,8 +9,8 @@ namespace PM
     {
     public:
         SimulationMeasuringUnit(const json& configJson);
-        
-        Measurement& measure() noexcept override;
+
+        MeasurementList measure() noexcept override;
 
     private:
         float m_minVoltage;

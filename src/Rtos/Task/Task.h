@@ -18,7 +18,7 @@ namespace PM
         public:
             using Code = std::function<void(Task&)>;
             Task(
-                const std::string& name,
+                const char* name,
                 uint8_t priority,
                 size_t stackSize_B,
                 const Code& code,
@@ -27,7 +27,7 @@ namespace PM
 
             static Task getCurrent();
 
-            std::string getName() const;
+            const char* getName() const;
             void cancel();
 
         private:
