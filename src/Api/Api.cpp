@@ -137,12 +137,12 @@ void Api::createMeasuringEndpoints(
     RestApi& restApi,
     JsonResource& configResource,
     std::reference_wrapper<MeasuringUnit>& measuringUnit,
-    const Rtos::ValueMutex<MeasurementList>& sharedMeasurements
+    const Rtos::ValueMutex<MeasurementList>& measurementsValueMutex
 )
 {
-    restApi.handle("/measurements", HTTP_GET, [&sharedMeasurements](json, Version){
+    restApi.handle("/measurements", HTTP_GET, [&measurementsValueMutex](json, Version){
         json responseJson = json::array_t();
-        MeasurementList measurements = sharedMeasurements.get();
+        MeasurementList measurements = measurementsValueMutex.get();
         for (const auto& measurement : measurements)
             responseJson.push_back(measurement.toJson());
         return responseJson;
@@ -247,23 +247,23 @@ void Api::createClockEndpoints(RestApi& restApi, JsonResource& configResource, s
 void Api::createTrackerEndpoints(
     RestApi& restApi,
     JsonResource& configResource,
-    Rtos::ValueMutex<TrackerMap>& sharedTrackers,
+    Rtos::ValueMutex<TrackerMap>& trackersValueMutex,
     Clock& clock
 )
 {
-    restApi.handle("/trackers", HTTP_GET, [&sharedTrackers](json, Version){
-        TrackerMap trackers = sharedTrackers;
+    restApi.handle("/trackers", HTTP_GET, [&trackersValueMutex](json, Version){
+        TrackerMap trackers = trackersValueMutex;
         json responseJson = json::object_t();
         for(const auto& tracker : trackers)
             responseJson[tracker.first] = tracker.second.getData();
         return RestApi::JsonResponse(responseJson);
     });
 
-    restApi.handle("/trackers", HTTP_PUT, [&sharedTrackers](const json& requestJson, Version){
+    restApi.handle("/trackers", HTTP_PUT, [&trackersValueMutex](const json& requestJson, Version){
         json responseJson = json::object_t();
         for(const auto& requestJsonItems : requestJson.items())
         {
-            TrackerMap trackers = sharedTrackers;
+            TrackerMap trackers = trackersValueMutex;
             const std::string& trackerId = requestJsonItems.key();
             if (trackers.find(trackerId) != trackers.end())
             {
@@ -279,20 +279,20 @@ void Api::createTrackerEndpoints(
         return getJsonResource(configResource);
     });
 
-    restApi.handle("/trackers/config", HTTP_PATCH, [&configResource, &clock, &sharedTrackers](const json& requestJson, Version){
+    restApi.handle("/trackers/config", HTTP_PATCH, [&configResource, &clock, &trackersValueMutex](const json& requestJson, Version){
         json configJson = configResource.deserialize();
         patchJson(configJson, requestJson);
-        sharedTrackers = Config::configureTrackers(configJson, clock);
+        trackersValueMutex = Config::configureTrackers(configJson, clock);
         configResource.serialize(configJson);
         return configJson;
     });
 
-    restApi.handle("/trackers/config", HTTP_POST, [&configResource, &sharedTrackers, &clock](const json& requestJson, Version){
+    restApi.handle("/trackers/config", HTTP_POST, [&configResource, &trackersValueMutex, &clock](const json& requestJson, Version){
         json configJson = configResource.deserialize();
         std::stringstream key;
         key << requestJson.at("duration_s") << "_" << requestJson.at("sampleCount");
         configJson["trackers"][key.str()] = requestJson;
-        sharedTrackers = Config::configureTrackers(configJson, clock);
+        trackersValueMutex = Config::configureTrackers(configJson, clock);
         configResource.serialize(configJson);
         return RestApi::JsonResponse(configJson, 201);
     });
@@ -304,11 +304,11 @@ void Api::createTrackerEndpoints(
         restApi.handle(
             std::string("/trackers/config/") + key,
             HTTP_DELETE,
-            [key, &configResource, &sharedTrackers, &clock](json, Version){
+            [key, &configResource, &trackersValueMutex, &clock](json, Version){
                 json configJson = configResource.deserialize();
-                sharedTrackers.get().at(key).erase();
+                trackersValueMutex.get().at(key).erase();
                 configJson.at("trackers").erase(key);
-                sharedTrackers = Config::configureTrackers(configJson, clock);
+                trackersValueMutex = Config::configureTrackers(configJson, clock);
                 configResource.serialize(configJson);
                 return RestApi::JsonResponse(configJson);
             }
@@ -319,9 +319,9 @@ void Api::createTrackerEndpoints(
         return Config::getTrackersDefault();
     });
 
-    restApi.handle("/trackers/config/restore-default", HTTP_POST, [&configResource, &sharedTrackers, &clock](json, Version){
+    restApi.handle("/trackers/config/restore-default", HTTP_POST, [&configResource, &trackersValueMutex, &clock](json, Version){
         json defaultConfigJson = Config::getTrackersDefault();
-        sharedTrackers = Config::configureTrackers(defaultConfigJson, clock);
+        trackersValueMutex = Config::configureTrackers(defaultConfigJson, clock);
         configResource.serialize(defaultConfigJson);
         return defaultConfigJson;
     });

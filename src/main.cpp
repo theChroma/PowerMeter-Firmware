@@ -69,17 +69,17 @@ void setup()
         static std::reference_wrapper<Switch> switchUnit = Config::configureSwitch(switchConfigResource);
         static std::reference_wrapper<Clock> clock = Config::configureClock(clockConfigResource);
         static std::reference_wrapper<MeasuringUnit> measuringUnit = Config::configureMeasuring(measuringConfigResource);
-        static Rtos::ValueMutex<MeasurementList> sharedMeasurements;
-        static Rtos::ValueMutex<TrackerMap> sharedTrackers;
-        sharedTrackers = Config::configureTrackers(trackerConfigResource, clock);
+        static Rtos::ValueMutex<MeasurementList> measurementsValueMutex;
+        static Rtos::ValueMutex<TrackerMap> trackersValueMutex;
+        trackersValueMutex = Config::configureTrackers(trackerConfigResource, clock);
 
         Api::createSystemEndpoints(restApi, firmwareVersion, apiVersion);
         Api::createLoggerEndpoints(restApi, loggerConfigResource, server);
         Api::createSwitchEndpoints(restApi, switchConfigResource, switchUnit);
         Api::createClockEndpoints(restApi, clockConfigResource, clock);
-        Api::createTrackerEndpoints(restApi, trackerConfigResource, sharedTrackers, clock);
+        Api::createTrackerEndpoints(restApi, trackerConfigResource, trackersValueMutex, clock);
         Api::createNetworkEndpoints(restApi, networkConfigResource);
-        Api::createMeasuringEndpoints(restApi, measuringConfigResource, measuringUnit, sharedMeasurements);
+        Api::createMeasuringEndpoints(restApi, measuringConfigResource, measuringUnit, measurementsValueMutex);
 
         Logger[LogLevel::Info] << "Boot sequence finished. Running..." << std::endl;
 
@@ -87,7 +87,7 @@ void setup()
         static Rtos::Task measuringTask("Measuring", 10, 3000, [](Rtos::Task& task){
                 while (true)
                 {
-                    sharedMeasurements = measuringUnit.get().measure();
+                    measurementsValueMutex = measuringUnit.get().measure();
                     delay(1000);
                 }
             },
@@ -97,10 +97,10 @@ void setup()
         static Rtos::Task trackerTask("Tracker", 1, 8000, [](Rtos::Task& task){
             while (true)
             {
-                MeasurementList measurements = sharedMeasurements;
+                MeasurementList measurements = measurementsValueMutex;
                 if (measurements.size() == 0)
                     continue;
-                TrackerMap trackers = sharedTrackers;
+                TrackerMap trackers = trackersValueMutex;
                 for (auto& tracker : trackers)
                     tracker.second.track(measurements.front().value);
                 delay(1000);

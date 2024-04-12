@@ -18,13 +18,13 @@ namespace Api
     void createTrackerEndpoints(
         RestApi& restApi,
         JsonResource& configResource,
-        Rtos::ValueMutex<TrackerMap>& sharedTrackers,
+        Rtos::ValueMutex<TrackerMap>& trackersValueMutex,
         Clock& clock
     );
     void createMeasuringEndpoints(
         RestApi& restApi,
         JsonResource& configResource,
         std::reference_wrapper<MeasuringUnit>& measuringUnit,
-        const Rtos::ValueMutex<MeasurementList>& sharedMeasurements
+        const Rtos::ValueMutex<MeasurementList>& measurementsValueMutex
     );
 };
