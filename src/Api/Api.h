@@ -8,26 +8,23 @@
 #include "Rtos/ValueMutex/ValueMutex.h"
 
 
-class Api
+namespace Api
 {
-public:
-    Api(RestApi& api);
-    void createSystemEndpoints(const Version& firmwareVersion, const Version& apiVersion);
-    void createLoggerEndpoints(JsonResource& configResource, AsyncWebServer &server);
-    void createSwitchEndpoints(JsonResource& configResource, std::reference_wrapper<Switch>& switchUnit);
-    void createClockEndpoints(JsonResource& configResource, std::reference_wrapper<Clock>& clock);
+    void createSystemEndpoints(RestApi& restApi, const Version& firmwareVersion, const Version& apiVersion);
+    void createLoggerEndpoints(RestApi& restApi, JsonResource& configResource, AsyncWebServer &server);
+    void createSwitchEndpoints(RestApi& restApi, JsonResource& configResource, std::reference_wrapper<Switch>& switchUnit);
+    void createClockEndpoints(RestApi& restApi, JsonResource& configResource, std::reference_wrapper<Clock>& clock);
+    void createNetworkEndpoints(RestApi& restApi, JsonResource& configResource);
     void createTrackerEndpoints(
+        RestApi& restApi,
         JsonResource& configResource,
         Rtos::ValueMutex<TrackerMap>& sharedTrackers,
         Clock& clock
     );
-    void createNetworkEndpoints(JsonResource& configResource);
     void createMeasuringEndpoints(
+        RestApi& restApi,
         JsonResource& configResource,
         std::reference_wrapper<MeasuringUnit>& measuringUnit,
         const Rtos::ValueMutex<MeasurementList>& sharedMeasurements
     );
-
-private:
-    RestApi& m_restApi;
 };

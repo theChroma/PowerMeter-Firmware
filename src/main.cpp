@@ -73,14 +73,13 @@ void setup()
         static Rtos::ValueMutex<TrackerMap> sharedTrackers;
         sharedTrackers = Config::configureTrackers(trackerConfigResource, clock);
 
-        Api api(restApi);
-        api.createSystemEndpoints(firmwareVersion, apiVersion);
-        api.createLoggerEndpoints(loggerConfigResource, server);
-        api.createSwitchEndpoints(switchConfigResource, switchUnit);
-        api.createClockEndpoints(clockConfigResource, clock);
-        api.createTrackerEndpoints(trackerConfigResource, sharedTrackers, clock);
-        api.createNetworkEndpoints(networkConfigResource);
-        api.createMeasuringEndpoints(measuringConfigResource, measuringUnit, sharedMeasurements);
+        Api::createSystemEndpoints(restApi, firmwareVersion, apiVersion);
+        Api::createLoggerEndpoints(restApi, loggerConfigResource, server);
+        Api::createSwitchEndpoints(restApi, switchConfigResource, switchUnit);
+        Api::createClockEndpoints(restApi, clockConfigResource, clock);
+        Api::createTrackerEndpoints(restApi, trackerConfigResource, sharedTrackers, clock);
+        Api::createNetworkEndpoints(restApi, networkConfigResource);
+        Api::createMeasuringEndpoints(restApi, measuringConfigResource, measuringUnit, sharedMeasurements);
 
         Logger[LogLevel::Info] << "Boot sequence finished. Running..." << std::endl;
 
