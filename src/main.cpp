@@ -9,7 +9,7 @@
 #include "JsonResource/BackedUpJsonResource/BackedUpJsonResource.h"
 #include "ScopeProfiler/ScopeProfiler.h"
 #include "FileBrowser/FileBrowser.h"
-#include "RestAPI/RestAPI.h"
+#include "RestApi/RestApi.h"
 #include "Rtos/Rtos.h"
 #include "Rtos/Task/Task.h"
 #include "Rtos/ValueMutex/ValueMutex.h"
@@ -48,7 +48,7 @@ void setup()
 
 
         static AsyncWebServer server(80);
-        static RestAPI restApi(
+        static RestApi restApi(
             server,
             apiVersion,
             "/api"
@@ -70,7 +70,7 @@ void setup()
         server.begin();
         static std::reference_wrapper<Switch> switchUnit = Config::configureSwitch(switchConfigResource);
         static std::reference_wrapper<Clock> clock = Config::configureClock(clockConfigResource);
-        static std::reference_wrapper<MeasuringUnit> measuringUnit = Config::configureMeasuringUnit(measuringConfigResource);
+        static std::reference_wrapper<MeasuringUnit> measuringUnit = Config::configureMeasuring(measuringConfigResource);
         static Rtos::ValueMutex<MeasurementList> sharedMeasurements;
         static Rtos::ValueMutex<TrackerMap> sharedTrackers;
         sharedTrackers = Config::configureTrackers(trackerConfigResource, clock);

@@ -9,22 +9,24 @@
 #include <WiFi.h>
 #include <LittleFS.h>
 #include <functional>
+#include <vector>
 
 using namespace PM;
 
 namespace
 {
-    RestAPI::JsonResponse handleGetJsonResource(JsonResource& jsonResource)
+    RestApi::JsonResponse getJsonResource(JsonResource& jsonResource)
     {
-        return RestAPI::JsonResponse(jsonResource.deserialize());
+        return RestApi::JsonResponse(jsonResource.deserialize());
     }
 
 
-    RestAPI::JsonResponse handlePutJsonResource(JsonResource& jsonResource, const json& requestJson)
+    RestApi::JsonResponse putJsonResource(JsonResource& jsonResource, const json& requestJson)
     {
         jsonResource.serialize(requestJson);
         return jsonResource.deserialize();
     }
+
 
     size_t getJsonSizeRecursive(const json& data)
     {
@@ -48,49 +50,61 @@ namespace
         }
     }
 
-    RestAPI::JsonResponse handlePatchJsonResource(JsonResource& jsonResource, const json& requestJson, bool allowAdding = false)
+
+    void patchJson(
+        json& targetJson,
+        const json& patchJson,
+        const std::vector<json::json_pointer>& readonlyItems = {"/version"_json_pointer},
+        bool allowAdding = false
+    )
     {
-        json storedJson = jsonResource.deserialize();
-        size_t sizeBefore = getJsonSizeRecursive(storedJson);
-        storedJson.merge_patch(requestJson);
+        for (const auto& readonlyItem : readonlyItems)
+        {
+            if (patchJson.contains(readonlyItem))
+                throw std::runtime_error(SOURCE_LOCATION + "Property at \"" + readonlyItem.to_string() + "\" is readonly");
+        }
 
-        if(!allowAdding && getJsonSizeRecursive(storedJson) > sizeBefore)
-            throw std::runtime_error(SOURCE_LOCATION + "Adding properties using PATCH is not allowed here");
+        size_t sizeBefore = getJsonSizeRecursive(targetJson);
 
-        jsonResource.serialize(storedJson);
-        return jsonResource.deserialize();
+        targetJson.merge_patch(patchJson);
+
+        if(!allowAdding && getJsonSizeRecursive(targetJson) > sizeBefore)
+            throw std::runtime_error(SOURCE_LOCATION + "Adding properties using PATCH is not allowed");
     }
 }
 
 
-Api::Api(RestAPI &api) : m_restApi(api)
+Api::Api(RestApi &api) : m_restApi(api)
 {}
 
 
 void Api::createSystemEndpoints(const Version& firmwareVersion, const Version& apiVersion)
 {
     m_restApi.handle("/info", HTTP_GET, [firmwareVersion, apiVersion](json, Version){
-        json versionsJson;
-        versionsJson["firmware"] = firmwareVersion;
-        versionsJson["api"] = apiVersion;
-
-        json statisticsJson;
-        statisticsJson["filesystem"]["total_B"] = LittleFS.totalBytes();
-        statisticsJson["filesystem"]["used_B"] = LittleFS.usedBytes();
-        statisticsJson["heap"]["used_B"] = ESP.getHeapSize() - ESP.getMinFreeHeap();
-        statisticsJson["heap"]["total_B"] = ESP.getHeapSize();
-
-        json responseJson;
         std::stringstream chipdId;
         chipdId << std::hex << ESP.getEfuseMac();
-        responseJson["chipId"] = chipdId.str();
-        responseJson["uptime_s"] = millis() / 1000.0;
-        responseJson["versions"] = versionsJson;
-        responseJson["statistics"] = statisticsJson;
-        return responseJson;
+        return json {
+            {"chipId", chipdId.str()},
+            {"uptime_s", millis() / 1000.0},
+            {"versions", {
+                {"firmware", std::string(firmwareVersion)},
+                {"api", std::string(firmwareVersion)},
+            }},
+            {"statistics", {
+                {"filesystem", {
+                    {"totalBytes", LittleFS.totalBytes()},
+                    {"usedBytes", LittleFS.usedBytes()},
+                }},
+                {"heap", {
+                    {"totalBytes", ESP.getHeapSize() - ESP.getMinFreeHeap()},
+                    {"usedBytes", ESP.getHeapSize()},
+                }},
+            }}
+        };
     });
+
     m_restApi.handle("/reboot", HTTP_POST, [](json, Version){
-        return RestAPI::JsonResponse(nullptr, 204, {}, []{
+        return RestApi::JsonResponse(nullptr, 204, {}, []{
             Logger[LogLevel::Info] << "Rebooting PowerMeter..." << std::endl;
             ESP.restart();
         });
@@ -101,12 +115,26 @@ void Api::createSystemEndpoints(const Version& firmwareVersion, const Version& a
 void Api::createLoggerEndpoints(JsonResource& configResource, AsyncWebServer& server)
 {
     m_restApi.handle("/logger/config", HTTP_GET, [&configResource](json, Version){
-        return handleGetJsonResource(configResource);
+        return getJsonResource(configResource);
     });
+
     m_restApi.handle("/logger/config", HTTP_PATCH, [&configResource, &server](const json& requestJson, Version){
-        RestAPI::JsonResponse response = handlePatchJsonResource(configResource, requestJson);
-        Config::configureLogger(configResource, server);
-        return response;
+        json configJson = configResource.deserialize();
+        patchJson(configJson, requestJson);
+        Config::configureLogger(configJson, server);
+        configResource.serialize(configJson);
+        return configJson;
+    });
+
+    m_restApi.handle("/logger/config/default", HTTP_GET, [](json, Version){
+        return Config::getLoggerDefault();
+    });
+
+    m_restApi.handle("/logger/config/restore-default", HTTP_POST, [&configResource, &server](json, Version){
+        json defaultConfigJson = Config::getLoggerDefault();
+        Config::configureLogger(defaultConfigJson, server);
+        configResource.serialize(defaultConfigJson);
+        return defaultConfigJson;
     });
 }
 
@@ -126,13 +154,26 @@ void Api::createMeasuringEndpoints(
     });
 
     m_restApi.handle("/measuring/config", HTTP_GET, [&configResource](json, Version){
-        return handleGetJsonResource(configResource);
+        return getJsonResource(configResource);
     });
 
     m_restApi.handle("/measuring/config", HTTP_PATCH, [&configResource, &measuringUnit](const json& requestJson, Version){
-        RestAPI::JsonResponse response = handlePatchJsonResource(configResource, requestJson);
-        measuringUnit = Config::configureMeasuringUnit(configResource);
-        return response;
+        json configJson = configResource.deserialize();
+        patchJson(configJson, requestJson);
+        measuringUnit = Config::configureMeasuring(configJson);
+        configResource.serialize(configJson);
+        return configJson;
+    });
+
+    m_restApi.handle("/measuring/config/default", HTTP_GET, [](json, Version){
+        return Config::getMeasuringDefault();
+    });
+
+    m_restApi.handle("/measuring/config/restore-default", HTTP_POST, [&configResource, &measuringUnit](json, Version){
+        json defaultConfigJson = Config::getMeasuringDefault();
+        measuringUnit = Config::configureMeasuring(defaultConfigJson);
+        configResource.serialize(defaultConfigJson);
+        return defaultConfigJson;
     });
 }
 
@@ -157,13 +198,26 @@ void Api::createSwitchEndpoints(JsonResource& configResource, std::reference_wra
     });
 
     m_restApi.handle("/switch/config", HTTP_GET, [&configResource](json, Version){
-        return handleGetJsonResource(configResource);
+        return getJsonResource(configResource);
     });
 
     m_restApi.handle("/switch/config", HTTP_PATCH, [&configResource, &switchUnit](const json& requestJson, Version){
-        RestAPI::JsonResponse response = handlePatchJsonResource(configResource, requestJson);
-        switchUnit = Config::configureSwitch(configResource);
-        return response;
+        json configJson = configResource.deserialize();
+        patchJson(configJson, requestJson);
+        switchUnit = Config::configureSwitch(configJson);
+        configResource.serialize(configJson);
+        return configJson;
+    });
+
+    m_restApi.handle("/switch/config/default", HTTP_GET, [](json, Version){
+        return Config::getSwitchDefault();
+    });
+
+    m_restApi.handle("/switch/config/restore-default", HTTP_POST, [&configResource, &switchUnit](json, Version){
+        json defaultConfigJson = Config::getSwitchDefault();
+        switchUnit = Config::configureSwitch(defaultConfigJson);
+        configResource.serialize(defaultConfigJson);
+        return defaultConfigJson;
     });
 }
 
@@ -171,13 +225,26 @@ void Api::createSwitchEndpoints(JsonResource& configResource, std::reference_wra
 void Api::createClockEndpoints(JsonResource& configResource, std::reference_wrapper<Clock>& clock)
 {
     m_restApi.handle("/clock/config", HTTP_GET, [&configResource](json, Version){
-        return handleGetJsonResource(configResource);
+        return getJsonResource(configResource);
     });
 
     m_restApi.handle("/clock/config", HTTP_PATCH, [&configResource, &clock](const json& requestJson, Version){
-        RestAPI::JsonResponse response = handlePatchJsonResource(configResource, requestJson);
-        clock = Config::configureClock(configResource);
-        return response;
+        json configJson = configResource.deserialize();
+        patchJson(configJson, requestJson);
+        clock = Config::configureClock(configJson);
+        configResource.serialize(configJson);
+        return configJson;
+    });
+
+    m_restApi.handle("/clock/config/default", HTTP_GET, [](json, Version){
+        return Config::getClockDefault();
+    });
+
+    m_restApi.handle("/clock/config/restore-default", HTTP_POST, [&configResource, &clock](json, Version){
+        json defaultConfigJson = Config::getClockDefault();
+        clock = Config::configureClock(defaultConfigJson);
+        configResource.serialize(defaultConfigJson);
+        return defaultConfigJson;
     });
 }
 
@@ -193,7 +260,7 @@ void Api::createTrackerEndpoints(
         json responseJson = json::object_t();
         for(const auto& tracker : trackers)
             responseJson[tracker.first] = tracker.second.getData();
-        return RestAPI::JsonResponse(responseJson);
+        return RestApi::JsonResponse(responseJson);
     });
 
     m_restApi.handle("/trackers", HTTP_PUT, [&sharedTrackers](const json& requestJson, Version){
@@ -213,17 +280,25 @@ void Api::createTrackerEndpoints(
     });
 
     m_restApi.handle("/trackers/config", HTTP_GET, [&configResource](json, Version){
-        return handleGetJsonResource(configResource);
+        return getJsonResource(configResource);
+    });
+
+    m_restApi.handle("/trackers/config", HTTP_PATCH, [&configResource, &clock, &sharedTrackers](const json& requestJson, Version){
+        json configJson = configResource.deserialize();
+        patchJson(configJson, requestJson);
+        sharedTrackers = Config::configureTrackers(configJson, clock);
+        configResource.serialize(configJson);
+        return configJson;
     });
 
     m_restApi.handle("/trackers/config", HTTP_POST, [&configResource, &sharedTrackers, &clock](const json& requestJson, Version){
         json configJson = configResource.deserialize();
         std::stringstream key;
         key << requestJson.at("duration_s") << "_" << requestJson.at("sampleCount");
-        configJson[key.str()] = requestJson;
+        configJson["trackers"][key.str()] = requestJson;
+        sharedTrackers = Config::configureTrackers(configJson, clock);
         configResource.serialize(configJson);
-        sharedTrackers = Config::configureTrackers(configResource, clock);
-        return RestAPI::JsonResponse(configJson, 201);
+        return RestApi::JsonResponse(configJson, 201);
     });
 
     json trackersJson = configResource.deserialize();
@@ -236,31 +311,57 @@ void Api::createTrackerEndpoints(
             [key, &configResource, &sharedTrackers, &clock](json, Version){
                 json configJson = configResource.deserialize();
                 sharedTrackers.get().at(key).erase();
-                configJson.erase(key);
+                configJson.at("trackers").erase(key);
+                sharedTrackers = Config::configureTrackers(configJson, clock);
                 configResource.serialize(configJson);
-                sharedTrackers = Config::configureTrackers(configResource, clock);
-                return RestAPI::JsonResponse(configJson);
+                return RestApi::JsonResponse(configJson);
             }
         );
     }
+
+    m_restApi.handle("/trackers/config/default", HTTP_GET, [](json, Version){
+        return Config::getTrackersDefault();
+    });
+
+    m_restApi.handle("/trackers/config/restore-default", HTTP_POST, [&configResource, &sharedTrackers, &clock](json, Version){
+        json defaultConfigJson = Config::getTrackersDefault();
+        sharedTrackers = Config::configureTrackers(defaultConfigJson, clock);
+        configResource.serialize(defaultConfigJson);
+        return defaultConfigJson;
+    });
 }
 
 
 void Api::createNetworkEndpoints(JsonResource &configResource)
 {
     m_restApi.handle("/network/config", HTTP_GET, [&configResource](json, Version){
-        RestAPI::JsonResponse response = handleGetJsonResource(configResource);
-        response.data["stationary"]["macAddress"] = WiFi.macAddress().c_str();
-        response.data["acesspoint"]["macAddress"] = WiFi.softAPmacAddress().c_str();
-        return response;
+        return getJsonResource(configResource);
     });
 
     m_restApi.handle("/network/config", HTTP_PATCH, [&configResource](const json& requestJson, Version){
-        RestAPI::JsonResponse response = handlePatchJsonResource(configResource, requestJson);
-        response.doAfterSend = [&configResource]{
-            Config::configureNetwork(configResource);
+        RestApi::JsonResponse response = configResource.deserialize();
+        patchJson(response.data, requestJson, {
+            "/version"_json_pointer,
+            "/stationary/macAddress"_json_pointer,
+            "/accesspoint/macAddress"_json_pointer,
+        });
+        response.doAfterSend = [&configResource, response]{
+            json configJson = response.data;
+            Config::configureNetwork(configJson);
+            configResource.serialize(configJson);
         };
         return response;
+    });
+
+    m_restApi.handle("/network/config/default", HTTP_GET, [](json, Version){
+        return Config::getNetworkDefault();
+    });
+
+    m_restApi.handle("/network/config/restore-default", HTTP_POST, [&configResource](json, Version){
+        json defaultConfigJson = Config::getNetworkDefault();
+        Config::configureNetwork(defaultConfigJson);
+        configResource.serialize(defaultConfigJson);
+        return defaultConfigJson;
     });
 }
 

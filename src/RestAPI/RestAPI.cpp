@@ -1,12 +1,12 @@
 #ifdef ESP32
 
-#include "RestAPI.h"
+#include "RestApi.h"
 #include "ExceptionTrace/ExceptionTrace.h"
 #include "SourceLocation/SourceLocation.h"
 #include "Logger/Logger.h"
 #include <sstream>
 
-using PM::RestAPI;
+using PM::RestApi;
 
 namespace
 {
@@ -21,9 +21,31 @@ namespace
         }
         return result;
     }
+
+    std::string methodToString(WebRequestMethod method)
+    {
+        switch (method)
+        {
+            case HTTP_GET:
+                return "GET";
+            case HTTP_POST:
+                return "POST";
+            case HTTP_DELETE:
+                return "DELETE";
+            case HTTP_PUT:
+                return "PUT";
+            case HTTP_PATCH:
+                return "PATCH";
+            case HTTP_HEAD:
+                return "HEAD";
+            case HTTP_OPTIONS:
+                return "OPTIONS";
+        }
+        return "";
+    }
 }
 
-RestAPI::RestAPI(AsyncWebServer &server, const Version& apiVersion, const std::string &baseUri) noexcept :
+RestApi::RestApi(AsyncWebServer &server, const Version& apiVersion, const std::string &baseUri) noexcept :
     m_server(server),
     m_apiVersion(apiVersion),
     m_baseUri(baseUri)
@@ -38,11 +60,11 @@ RestAPI::RestAPI(AsyncWebServer &server, const Version& apiVersion, const std::s
     });
 }
 
-void RestAPI::handle(const std::string &uri, WebRequestMethod method, const JsonHandler &handler) noexcept
+void RestApi::handle(const std::string &uri, WebRequestMethod method, const JsonHandler &handler) noexcept
 {
     static bool alreadyHandled = false;
     alreadyHandled = false;
-    auto serverHandler = [this, handler](AsyncWebServerRequest* request, uint8_t* data, size_t length, size_t index, size_t total) {
+    auto serverHandler = [this, handler, method, uri](AsyncWebServerRequest* request, uint8_t* data, size_t length, size_t index, size_t total) {
         JsonResponse jsonResponse(json(), 500);
         try
         {
@@ -63,12 +85,21 @@ void RestAPI::handle(const std::string &uri, WebRequestMethod method, const Json
                 body.resize(length);
                 requestJson = json::parse(body);
             }
-            jsonResponse = handler(requestJson, requestedApiVersion);
+            try
+            {
+                jsonResponse = handler(requestJson, requestedApiVersion);
+            }
+            catch (...)
+            {
+                ExceptionTrace::trace(SOURCE_LOCATION + "Request handler for \"" + methodToString(method) + " " + uri + "\" failed");
+                throw;
+            }
         }
         catch (...)
         {
             Logger[LogLevel::Error]
-                << "Exception occurred at " << SOURCE_LOCATION << "\r\n"
+                << "Exception occurred at "
+                << SOURCE_LOCATION << "\r\n"
                 << ExceptionTrace::what(false) << std::endl;
             jsonResponse.data = ExceptionTrace::get();
         }

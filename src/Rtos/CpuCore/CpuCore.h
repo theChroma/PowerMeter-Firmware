@@ -1,5 +1,7 @@
 #pragma once
 
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 #include <string>
 
 namespace PM
@@ -10,7 +12,7 @@ namespace PM
         {
             enum Value : int
             {
-                Auto = -1,
+                Auto = tskNO_AFFINITY,
                 Core0 = 0,
                 Core1 = 1,
             };

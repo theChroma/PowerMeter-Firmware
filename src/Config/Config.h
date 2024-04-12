@@ -12,11 +12,28 @@ namespace PM
 {
     namespace Config
     {
-        void configureLogger(const JsonResource& configResource, AsyncWebServer& server);
-        std::reference_wrapper<MeasuringUnit> configureMeasuringUnit(const JsonResource& configResource);
-        std::reference_wrapper<Clock> configureClock(const JsonResource& configResource);
-        std::reference_wrapper<Switch> configureSwitch(const JsonResource& configResource);
-        TrackerMap configureTrackers(const JsonResource& configResource, std::reference_wrapper<Clock> clock);
+        json getLoggerDefault() noexcept;
+        void configureLogger(JsonResource& configResource, AsyncWebServer& server);
+        void configureLogger(const json& configJson, AsyncWebServer& server);
+
+        json getMeasuringDefault() noexcept;
+        std::reference_wrapper<MeasuringUnit> configureMeasuring(JsonResource& configResource);
+        std::reference_wrapper<MeasuringUnit> configureMeasuring(const json& configJson);
+
+        json getClockDefault() noexcept;
+        std::reference_wrapper<Clock> configureClock(JsonResource& configResource);
+        std::reference_wrapper<Clock> configureClock(const json& configJson);
+
+        json getSwitchDefault() noexcept;
+        std::reference_wrapper<Switch> configureSwitch(JsonResource& configResource);
+        std::reference_wrapper<Switch> configureSwitch(const json& configJson);
+
+        json getTrackersDefault() noexcept;
+        TrackerMap configureTrackers(JsonResource& configResource, std::reference_wrapper<Clock> clock);
+        TrackerMap configureTrackers(const json& configJson, std::reference_wrapper<Clock> clock);
+
+        json getNetworkDefault();
         void configureNetwork(JsonResource& configResource);
+        void configureNetwork(json& configResource);
     }
 }

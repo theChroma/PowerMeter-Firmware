@@ -12,7 +12,7 @@ namespace PM
     class Api
     {
     public:
-        Api(RestAPI& api);
+        Api(RestApi& api);
         void createSystemEndpoints(const Version& firmwareVersion, const Version& apiVersion);
         void createLoggerEndpoints(JsonResource& configResource, AsyncWebServer &server);
         void createSwitchEndpoints(JsonResource& configResource, std::reference_wrapper<Switch>& switchUnit);
@@ -30,6 +30,6 @@ namespace PM
         );
 
     private:
-        RestAPI& m_restApi;
+        RestApi& m_restApi;
     };
 }

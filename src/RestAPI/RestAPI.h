@@ -14,7 +14,7 @@ namespace PM
         using HeaderMap = std::unordered_map<std::string, std::string>;
     }
 
-    class RestAPI
+    class RestApi
     {
     public:
         struct JsonResponse
@@ -38,7 +38,7 @@ namespace PM
 
         using JsonHandler = std::function<JsonResponse(const json&, const Version&)>;
 
-        RestAPI(AsyncWebServer& server, const Version& apiVersion, const std::string& baseUri = "") noexcept;
+        RestApi(AsyncWebServer& server, const Version& apiVersion, const std::string& baseUri = "") noexcept;
         void handle(const std::string& uri, WebRequestMethod method, const JsonHandler& handler) noexcept;
 
     private:
