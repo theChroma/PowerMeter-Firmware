@@ -3,14 +3,13 @@
 #include <vector>
 #include <json.hpp>
 
-namespace PM
+
+struct Measurement
 {
-    struct Measurement
-    {
-        json toJson() const;
-        const char* name;
-        float value;
-        const char* unit;
-    };
-    using MeasurementList = std::vector<Measurement>;
-}
+    json toJson() const;
+    const char* name;
+    float value;
+    const char* unit;
+};
+
+using MeasurementList = std::vector<Measurement>;

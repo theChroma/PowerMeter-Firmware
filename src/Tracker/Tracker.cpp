@@ -7,7 +7,6 @@
 #include <math.h>
 #include <sstream>
 
-using PM::Tracker;
 
 Tracker::Tracker(
     const std::string& title,

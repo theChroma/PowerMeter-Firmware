@@ -6,7 +6,6 @@
 #include "Logger/Logger.h"
 #include <sstream>
 
-using PM::RestApi;
 
 namespace
 {

@@ -5,9 +5,7 @@
 #include <Arduino.h>
 #include <utility>
 
-using namespace PM::Rtos;
-using namespace PM;
-
+using namespace Rtos;
 
 Task::Task(
     const char* name,

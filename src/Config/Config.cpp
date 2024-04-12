@@ -21,9 +21,6 @@
 #include <functional>
 #include <unordered_map>
 
-using namespace PM;
-using tl::optional;
-
 namespace
 {
     template<typename T>
@@ -33,7 +30,7 @@ namespace
     template<typename T>
     std::reference_wrapper<T> configureImplementation(const json& configJson)
     {
-        static optional<T> implementation;
+        static tl::optional<T> implementation;
         implementation.emplace(configJson);
         return implementation.value();
     }

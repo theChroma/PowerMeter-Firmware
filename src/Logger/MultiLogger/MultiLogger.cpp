@@ -1,10 +1,9 @@
 #include "MultiLogger.h"
 
-using PM::MultiLogger;
-
 
 MultiLogger::MultiLogger(const std::vector<LogStream> &streams) : m_streams(streams)
 {}
+
 
 std::ostream &MultiLogger::operator[](LogLevel level) noexcept
 {

@@ -4,16 +4,13 @@
 #include <RTClib.h>
 #include <json.hpp>
 
-namespace PM
+class DS3231 : public Clock
 {
-    class DS3231 : public Clock
-    {
-    public:
-        DS3231(const json& configJson);
-        
-        time_t now() const noexcept override;
+public:
+    DS3231(const json& configJson);
 
-    private:
-        RTC_DS3231 m_rtc;
-    };
-}
+    time_t now() const noexcept override;
+
+private:
+    RTC_DS3231 m_rtc;
+};

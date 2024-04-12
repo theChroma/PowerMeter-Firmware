@@ -7,12 +7,12 @@
 #include "SourceLocation/SourceLocation.h"
 #include <Arduino.h>
 
-using namespace PM;
 
 namespace
 {
     JsonResource stateResource("/Relay/State.json");
 }
+
 
 Relay::Relay(const json &configJson)
 {

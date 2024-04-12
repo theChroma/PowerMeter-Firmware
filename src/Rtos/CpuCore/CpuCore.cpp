@@ -1,7 +1,7 @@
 #include "CpuCore.h"
 #include <esp32/rom/rtc.h>
 
-using namespace PM::Rtos;
+using namespace Rtos;
 
 const char* CpuCore::getResetReason() const
 {

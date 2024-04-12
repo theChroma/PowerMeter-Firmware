@@ -3,10 +3,7 @@
 #include <string>
 #include <ESPAsyncWebServer.h>
 
-namespace PM
+namespace FileBrowser
 {
-    namespace FileBrowser
-    {
-        void serve(AsyncWebServer& server, const std::string& uri);
-    }
+    void serve(AsyncWebServer& server, const std::string& uri);
 }

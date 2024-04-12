@@ -8,7 +8,6 @@
 #include <Arduino.h>
 #include <math.h>
 
-using namespace PM;
 
 namespace
 {

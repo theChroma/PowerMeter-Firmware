@@ -3,8 +3,6 @@
 #include <sstream>
 #include <unordered_map>
 
-using PM::LogLevel;
-
 namespace
 {
     std::unordered_map<LogLevel::Value, std::string> logLevels = {
@@ -44,12 +42,10 @@ LogLevel::operator std::string() const noexcept
     return logLevels.at(value);
 }
 
-namespace PM
+
+std::ostream& operator<<(std::ostream& os, const LogLevel& level) noexcept
 {
-    std::ostream& operator<<(std::ostream& os, const LogLevel& level) noexcept
-    {
-        os << static_cast<std::string>(level);
-        return os;
-    }
+    os << static_cast<std::string>(level);
+    return os;
 }
 

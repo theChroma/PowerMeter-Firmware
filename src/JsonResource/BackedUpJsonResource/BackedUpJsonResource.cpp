@@ -9,8 +9,6 @@
 #include <fstream>
 #include <map>
 
-using namespace PM;
-
 namespace
 {
     time_t readLastModificationTime(const JsonResource& resource)

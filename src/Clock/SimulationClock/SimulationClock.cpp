@@ -6,8 +6,6 @@
 #include "ExceptionTrace/ExceptionTrace.h"
 #include "Arduino.h"
 
-using PM::SimulationClock;
-
 
 SimulationClock::SimulationClock(const json &configJson)
 {

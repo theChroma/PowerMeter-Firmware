@@ -10,7 +10,6 @@
 #include <regex>
 #endif
 
-using PM::JsonResource;
 
 JsonResource::JsonResource(const std::string& filePath, bool useCaching) noexcept :
     m_filePath(filePath),
@@ -149,11 +148,8 @@ JsonResource::operator std::string() const noexcept
 }
 
 
-namespace PM
+std::ostream& operator<<(std::ostream& os, const JsonResource& JsonResource) noexcept
 {
-    std::ostream& operator<<(std::ostream& os, const JsonResource& JsonResource) noexcept
-    {
-        os << static_cast<std::string>(JsonResource);
-        return os;
-    }
+    os << static_cast<std::string>(JsonResource);
+    return os;
 }

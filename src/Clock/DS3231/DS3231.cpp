@@ -7,8 +7,6 @@
 #include <exception>
 #include <sys/time.h>
 
-using PM::DS3231;
-
 
 DS3231::DS3231(const json &configJson)
 {

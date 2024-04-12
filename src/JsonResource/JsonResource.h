@@ -5,31 +5,28 @@
 #include <functional>
 #include <tl/optional.hpp>
 
-namespace PM
+class JsonResource
 {
-    class JsonResource
-    {
-    public:
-        JsonResource(const std::string& filePath, bool useCaching = true) noexcept;
+public:
+    JsonResource(const std::string& filePath, bool useCaching = true) noexcept;
 
-        virtual json deserialize() const;
-        virtual json deserializeOr(const json& defaultJson) const;
-        virtual json deserializeOrGet(const std::function<json()>& getDefaultJson) const;
-        virtual void serialize(const json& data);
-        virtual void erase();
+    virtual json deserialize() const;
+    virtual json deserializeOr(const json& defaultJson) const;
+    virtual json deserializeOrGet(const std::function<json()>& getDefaultJson) const;
+    virtual void serialize(const json& data);
+    virtual void erase();
 
-        void setFilePath(const std::string& path) noexcept;
-        std::string getFilePath() const noexcept;
+    void setFilePath(const std::string& path) noexcept;
+    std::string getFilePath() const noexcept;
 
-        operator std::string() const noexcept;
+    operator std::string() const noexcept;
 
-    protected:
-        CachedValue<json> m_cachedData;
+protected:
+    CachedValue<json> m_cachedData;
 
-    private:
-        mutable bool m_directoryExists = false;
-        std::string m_filePath;
-    };
+private:
+    mutable bool m_directoryExists = false;
+    std::string m_filePath;
+};
 
-    std::ostream& operator<<(std::ostream& os, const JsonResource& jsonResource) noexcept;
-}
+std::ostream& operator<<(std::ostream& os, const JsonResource& jsonResource) noexcept;

@@ -3,8 +3,6 @@
 #include "ExceptionTrace/ExceptionTrace.h"
 #include "SourceLocation/SourceLocation.h"
 
-using namespace PM;
-
 
 AverageAccumulator::AverageAccumulator(std::shared_ptr<JsonResource> storageResource) :
     m_storageResource(storageResource)

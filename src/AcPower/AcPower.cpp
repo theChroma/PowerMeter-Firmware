@@ -1,8 +1,6 @@
 #include "AcPower.h"
 #include <math.h>
 
-using namespace PM;
-
 
 AcPower::AcPower(float voltage_V, float current_A, float activePower_W) noexcept :
     m_voltage_V(voltage_V),

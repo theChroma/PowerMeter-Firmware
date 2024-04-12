@@ -9,7 +9,6 @@
 
 #include <string.h>
 
-using namespace PM;
 
 Version::Version(uint16_t major, uint16_t minor, uint16_t patch) noexcept :
     major(major),
@@ -71,11 +70,8 @@ Version::operator std::string() const noexcept
     return version.str();
 }
 
-namespace PM
+std::ostream& operator<<(std::ostream& os, const Version& version) noexcept
 {
-    std::ostream& operator<<(std::ostream& os, const Version& version) noexcept
-    {
-        os << static_cast<std::string>(version);
-        return os;
-    }
+    os << static_cast<std::string>(version);
+    return os;
 }

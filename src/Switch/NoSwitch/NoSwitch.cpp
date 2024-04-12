@@ -1,8 +1,6 @@
 #include "NoSwitch.h"
 #include "Logger/Logger.h"
 
-using PM::NoSwitch;
-
 
 NoSwitch::NoSwitch(const json &configJson) noexcept
 {

@@ -2,8 +2,7 @@
 #include "SourceLocation/SourceLocation.h"
 #include <mutex>
 
-
-using namespace PM::Rtos;
+using namespace Rtos;
 
 Mutex::Mutex(const char* name) :
     m_name(name),

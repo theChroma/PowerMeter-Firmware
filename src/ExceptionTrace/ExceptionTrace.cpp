@@ -2,8 +2,6 @@
 #include <sstream>
 #include <algorithm>
 
-using namespace PM;
-
 namespace
 {
     ExceptionTrace::Traces traces;

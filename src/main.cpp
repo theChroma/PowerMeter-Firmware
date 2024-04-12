@@ -10,7 +10,6 @@
 #include "ScopeProfiler/ScopeProfiler.h"
 #include "FileBrowser/FileBrowser.h"
 #include "RestApi/RestApi.h"
-#include "Rtos/Rtos.h"
 #include "Rtos/Task/Task.h"
 #include "Rtos/ValueMutex/ValueMutex.h"
 #include <tuple>
@@ -18,7 +17,6 @@
 #include <ElegantOTA.h>
 #include <fstream>
 
-using namespace PM;
 
 void setup()
 {

@@ -2,7 +2,6 @@
 #include <Arduino.h>
 #include "Logger/Logger.h"
 
-using namespace PM;
 
 ScopeProfiler::ScopeProfiler(const std::string& name) : m_name(name)
 {

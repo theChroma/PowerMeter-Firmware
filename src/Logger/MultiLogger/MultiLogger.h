@@ -5,15 +5,12 @@
 #include <iostream>
 #include <vector>
 
-namespace PM
+class MultiLogger
 {
-    class MultiLogger
-    {
-	public:
-		MultiLogger(const std::vector<LogStream>& streams);
-        std::ostream& operator[](LogLevel level) noexcept;
+public:
+    MultiLogger(const std::vector<LogStream>& streams);
+    std::ostream& operator[](LogLevel level) noexcept;
 
-	private:
-        std::vector<LogStream> m_streams;
-    };
-}
+private:
+    std::vector<LogStream> m_streams;
+};

@@ -4,27 +4,23 @@
 #include <freertos/task.h>
 #include <string>
 
-namespace PM
+namespace Rtos
 {
-    namespace Rtos
+    struct CpuCore
     {
-        struct CpuCore
+        enum Value : int
         {
-            enum Value : int
-            {
-                Auto = tskNO_AFFINITY,
-                Core0 = 0,
-                Core1 = 1,
-            };
-
-            constexpr CpuCore(Value value) : value(value) {}
-            constexpr operator Value() const { return value; }
-            explicit operator bool() const = delete;
-
-            const char* getResetReason() const;
-
-            Value value;
+            Auto = tskNO_AFFINITY,
+            Core0 = 0,
+            Core1 = 1,
         };
 
-    }
+        constexpr CpuCore(Value value) : value(value) {}
+        constexpr operator Value() const { return value; }
+        explicit operator bool() const = delete;
+
+        const char* getResetReason() const;
+
+        Value value;
+    };
 }

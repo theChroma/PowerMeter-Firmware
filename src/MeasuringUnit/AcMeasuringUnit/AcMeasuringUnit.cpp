@@ -10,8 +10,6 @@
 #include <math.h>
 
 
-using namespace PM;
-
 namespace
 {
     float calculateReactivePower(float activePower, float apparentPower)

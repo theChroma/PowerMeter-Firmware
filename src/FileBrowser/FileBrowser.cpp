@@ -7,8 +7,6 @@
 #include <LittleFS.h>
 
 
-using namespace PM;
-
 namespace
 {
     std::string getFilesystemTreeHtml(const std::string& uri, const std::string& path = "")
@@ -46,7 +44,7 @@ namespace
 
 
 
-void PM::FileBrowser::serve(AsyncWebServer& server, const std::string& uri)
+void FileBrowser::serve(AsyncWebServer& server, const std::string& uri)
 {
     server.serveStatic(uri.c_str(), LittleFS, "/")
         .setDefaultFile("/FileBrowser/index.html")

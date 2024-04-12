@@ -3,7 +3,6 @@
 #include "SourceLocation/SourceLocation.h"
 #include <algorithm>
 
-using namespace PM;
 
 LogStream::LogStream(LogLevel minLevel, LogLevel maxLevel, std::ostream& stream, bool showLevel) noexcept :
     m_minLevel(minLevel),

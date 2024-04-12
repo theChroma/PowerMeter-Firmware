@@ -4,16 +4,13 @@
 #include <json.hpp>
 #include <EmonLib.h>
 
-namespace PM
+class AcMeasuringUnit : public MeasuringUnit
 {
-    class AcMeasuringUnit : public MeasuringUnit
-    {
-    public:
-        AcMeasuringUnit(const json& configJson);
+public:
+    AcMeasuringUnit(const json& configJson);
 
-        MeasurementList measure() noexcept;
+    MeasurementList measure() noexcept;
 
-    private:
-        EnergyMonitor m_emon;
-    };
-}
+private:
+    EnergyMonitor m_emon;
+};

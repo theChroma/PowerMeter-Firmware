@@ -5,13 +5,11 @@
 #include "Logger/Logger.h"
 #include "ExceptionTrace/ExceptionTrace.h"
 #include "SourceLocation/SourceLocation.h"
-#include "Rtos/Rtos.h"
 #include <WiFi.h>
 #include <LittleFS.h>
 #include <functional>
 #include <vector>
 
-using namespace PM;
 
 namespace
 {
