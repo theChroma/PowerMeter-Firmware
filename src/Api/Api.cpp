@@ -5,6 +5,7 @@
 #include "Logger/Logger.h"
 #include "ExceptionTrace/ExceptionTrace.h"
 #include "SourceLocation/SourceLocation.h"
+#include "WifiScan/WifiScan.h"
 #include <WiFi.h>
 #include <LittleFS.h>
 #include <functional>
@@ -358,6 +359,10 @@ void Api::createNetworkEndpoints(RestApi& restApi, JsonResource &configResource)
         Config::configureNetwork(defaultConfigJson);
         configResource.serialize(defaultConfigJson);
         return defaultConfigJson;
+    });
+
+    restApi.handle("/network/scan", HTTP_GET, [](json, Version){
+        return WifiScan().toJson();
     });
 }
 

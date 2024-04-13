@@ -31,7 +31,6 @@ Tracker::Tracker(
 
 void Tracker::track(float value)
 {
-    // ScopeProfiler profiler(m_title);
     try
     {
         if(!isfinite(value))
