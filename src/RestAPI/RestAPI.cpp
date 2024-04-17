@@ -67,6 +67,7 @@ void RestApi::handle(const std::string &uri, WebRequestMethod method, const Json
         JsonResponse jsonResponse(json(), 500);
         try
         {
+            Logger[LogLevel::Debug] << "Request URL: " << request->url().c_str() << std::endl;
             Version requestedApiVersion(request->pathArg(0).c_str());
             if (requestedApiVersion > m_apiVersion)
             {
@@ -86,7 +87,11 @@ void RestApi::handle(const std::string &uri, WebRequestMethod method, const Json
             }
             try
             {
-                jsonResponse = handler(requestJson, requestedApiVersion);
+                jsonResponse = handler(JsonRequest {
+                    .data = requestJson,
+                    .version = requestedApiVersion,
+                    .serverRequest = *request,
+                });
             }
             catch (...)
             {
@@ -115,7 +120,7 @@ void RestApi::handle(const std::string &uri, WebRequestMethod method, const Json
     };
 
     std::stringstream uriRegex;
-    uriRegex << '^' << escapeSlashes(m_baseUri) << "/v(.*)" << escapeSlashes(uri) << '$';
+    uriRegex << '^' << escapeSlashes(m_baseUri) << "/v(.*)" << escapeSlashes(uri) << "$";
 
     m_server.on(
         uriRegex.str().c_str(),

@@ -15,6 +15,13 @@ namespace Http
 class RestApi
 {
 public:
+    struct JsonRequest
+    {
+        json data;
+        Version version;
+        const AsyncWebServerRequest& serverRequest;
+    };
+
     struct JsonResponse
     {
         JsonResponse(
@@ -34,7 +41,7 @@ public:
         std::function<void()> doAfterSend;
     };
 
-    using JsonHandler = std::function<JsonResponse(const json&, const Version&)>;
+    using JsonHandler = std::function<JsonResponse(JsonRequest)>;
 
     RestApi(AsyncWebServer& server, const Version& apiVersion, const std::string& baseUri = "") noexcept;
     void handle(const std::string& uri, WebRequestMethod method, const JsonHandler& handler) noexcept;
