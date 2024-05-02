@@ -1,3 +1,5 @@
+#ifdef ESP32
+
 #include "ScopeProfiler.h"
 #include <Arduino.h>
 #include "Logger/Logger.h"
@@ -20,3 +22,5 @@ ScopeProfiler::~ScopeProfiler()
         << profileDuration_us / 1000
         << " ms" << std::endl;
 }
+
+#endif

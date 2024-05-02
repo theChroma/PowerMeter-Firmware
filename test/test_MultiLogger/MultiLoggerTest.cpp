@@ -4,7 +4,6 @@
 #include <sstream>
 #include <fstream>
 
-using namespace PM;
 const std::string testString = "test123!";
 
 TEST(MultiLoggerTest, logAll)
@@ -28,19 +27,19 @@ TEST(MultiLoggerTest, showLevel)
     uut[LogLevel::Error] << testString;
     EXPECT_EQ(std::string("[ERROR] ") + testString, testStream.str());
     testStream.str("");
-    
+
     uut[LogLevel::Warning] << testString;
     EXPECT_EQ(std::string("[WARNING] ") + testString, testStream.str());
     testStream.str("");
-    
+
     uut[LogLevel::Debug] << testString;
     EXPECT_EQ(std::string("[DEBUG] ") + testString, testStream.str());
     testStream.str("");
-    
+
     uut[LogLevel::Info] << testString;
     EXPECT_EQ(std::string("[INFO] ") + testString, testStream.str());
     testStream.str("");
-    
+
     uut[LogLevel::Verbose] << testString;
     EXPECT_EQ(std::string("[VERBOSE] ") + testString, testStream.str());
     testStream.str("");
@@ -49,24 +48,24 @@ TEST(MultiLoggerTest, showLevel)
 TEST(MultiLoggerTest, minAndMaxLevel)
 {
     std::stringstream testStream;
-    MultiLogger uut({LogStream(LogLevel::Warning, LogLevel::Info, testStream, false)});
+    MultiLogger uut({LogStream(LogLevel::Warning, LogLevel::Debug, testStream, false)});
 
     uut[LogLevel::Error] << testString;
     EXPECT_EQ("", testStream.str());
     testStream.str("");
-    
+
     uut[LogLevel::Warning] << testString;
     EXPECT_EQ(testString, testStream.str());
     testStream.str("");
-    
-    uut[LogLevel::Debug] << testString;
-    EXPECT_EQ(testString, testStream.str());
-    testStream.str("");
-    
+
     uut[LogLevel::Info] << testString;
     EXPECT_EQ(testString, testStream.str());
     testStream.str("");
-    
+
+    uut[LogLevel::Debug] << testString;
+    EXPECT_EQ(testString, testStream.str());
+    testStream.str("");
+
     uut[LogLevel::Verbose] << testString;
     EXPECT_EQ("", testStream.str());
     testStream.str("");

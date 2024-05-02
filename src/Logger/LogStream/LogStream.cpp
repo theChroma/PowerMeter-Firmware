@@ -22,10 +22,7 @@ std::ostream& LogStream::operator[](LogLevel level) noexcept
     }
 
     class NullStreamBuffer : public std::streambuf
-    {
-    public:
-        int overflow(int c) override { return c; }
-    };
+    {};
 
     static NullStreamBuffer nullBuffer;
     static std::ostream nullStream(&nullBuffer);

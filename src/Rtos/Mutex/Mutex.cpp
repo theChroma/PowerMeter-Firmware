@@ -1,3 +1,5 @@
+#ifdef ESP32
+
 #include "Mutex.h"
 #include "SourceLocation/SourceLocation.h"
 #include <mutex>
@@ -41,3 +43,5 @@ void Mutex::unlock()
     }
 
 }
+
+#endif

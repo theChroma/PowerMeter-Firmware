@@ -1,3 +1,5 @@
+#ifdef ESP32
+
 #include "BackedUpJsonResource.h"
 #include "ExceptionTrace/ExceptionTrace.h"
 #include "SourceLocation/SourceLocation.h"
@@ -119,3 +121,5 @@ bool BackedUpJsonResource::getLastModifiedResourceIndex() const
         return lastModifiedResourceIndex;
     });
 }
+
+#endif

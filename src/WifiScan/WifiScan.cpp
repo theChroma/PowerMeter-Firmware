@@ -1,3 +1,5 @@
+#ifdef ESP32
+
 #include "WifiScan.h"
 #include "SourceLocation/SourceLocation.h"
 #include <WiFi.h>
@@ -73,3 +75,5 @@ json WifiScan::toJson()
     }
     return networksJson;
 }
+
+#endif

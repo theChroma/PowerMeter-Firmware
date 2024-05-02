@@ -1,3 +1,5 @@
+#ifdef ESP32
+
 #include "FileBrowser.h"
 #include "Logger/Logger.h"
 #include "SourceLocation/SourceLocation.h"
@@ -52,3 +54,5 @@ void FileBrowser::serve(AsyncWebServer& server, const std::string& uri)
             return String(getFilesystemTreeHtml(uri).c_str());
         });
 }
+
+#endif

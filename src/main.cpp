@@ -9,6 +9,7 @@
 #include "JsonResource/BackedUpJsonResource/BackedUpJsonResource.h"
 #include "ScopeProfiler/ScopeProfiler.h"
 #include "FileBrowser/FileBrowser.h"
+#include "Filesystem/File/LittleFsFile/LittleFsFile.h"
 #include "RestApi/RestApi.h"
 #include "Rtos/Task/Task.h"
 #include "Rtos/ValueMutex/ValueMutex.h"
@@ -83,29 +84,71 @@ void setup()
 
         Logger[LogLevel::Info] << "Boot sequence finished. Running..." << std::endl;
 
+        static Rtos::Task file0Task("file0", 20, 3000, [](Rtos::Task& task){
+                std::ofstream file("/file.txt");
+                if (!file.good())
+                    throw std::runtime_error("file not good");
+                file << "0" << std::flush;
+                file << "0" << std::flush;
+                file << "0" << std::flush;
+                file << "0" << std::flush;
+                file << "0" << std::flush;
+                file << "0" << std::flush;
+                file << "0" << std::flush;
+                file << "0" << std::flush;
+                file << "0" << std::flush;
+                file << "0" << std::flush;
+                file.close();
+                Logger[LogLevel::Debug] << "Task0 finished" << std::endl;
+                task.cancel();
+            },
+            Rtos::CpuCore::Core0
+        );
 
-        static Rtos::Task measuringTask("Measuring", 10, 3000, [](Rtos::Task& task){
-                while (true)
-                {
-                    measurementsValueMutex = measuringUnit.get().measure();
-                    delay(1000);
-                }
+        static Rtos::Task file1Task("file1", 20, 3000, [](Rtos::Task& task){
+                std::ofstream file("/file.txt");
+                if (!file.good())
+                    throw std::runtime_error("file not good");
+                file << "1" << std::flush;
+                file << "1" << std::flush;
+                file << "1" << std::flush;
+                file << "1" << std::flush;
+                file << "1" << std::flush;
+                file << "1" << std::flush;
+                file << "1" << std::flush;
+                file << "1" << std::flush;
+                file << "1" << std::flush;
+                file << "1" << std::flush;
+                file.close();
+                Logger[LogLevel::Debug] << "Task1 finished" << std::endl;
+                task.cancel();
             },
             Rtos::CpuCore::Core1
         );
 
-        static Rtos::Task trackerTask("Tracker", 1, 8000, [](Rtos::Task& task){
-            while (true)
-            {
-                MeasurementList measurements = measurementsValueMutex;
-                if (measurements.size() == 0)
-                    continue;
-                TrackerMap trackers = trackersValueMutex;
-                for (auto& tracker : trackers)
-                    tracker.second.track(measurements.front().value);
-                delay(1000);
-            }
-        });
+
+        // static Rtos::Task measuringTask("Measuring", 10, 3000, [](Rtos::Task& task){
+        //         while (true)
+        //         {
+        //             measurementsValueMutex = measuringUnit.get().measure();
+        //             delay(1000);
+        //         }
+        //     },
+        //     Rtos::CpuCore::Core1
+        // );
+
+        // static Rtos::Task trackerTask("Tracker", 1, 8000, [](Rtos::Task& task){
+        //     while (true)
+        //     {
+        //         MeasurementList measurements = measurementsValueMutex;
+        //         if (measurements.size() == 0)
+        //             continue;
+        //         TrackerMap trackers = trackersValueMutex;
+        //         for (auto& tracker : trackers)
+        //             tracker.second.track(measurements.front().value);
+        //         delay(1000);
+        //     }
+        // });
     }
     catch(...)
     {

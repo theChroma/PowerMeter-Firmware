@@ -1,3 +1,5 @@
+#ifdef ESP32
+
 #include "CpuCore.h"
 #include <esp32/rom/rtc.h>
 
@@ -25,3 +27,5 @@ const char* CpuCore::getResetReason() const
     }
     return "Unknown";
 }
+
+#endif

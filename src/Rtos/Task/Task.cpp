@@ -1,3 +1,5 @@
+#ifdef ESP32
+
 #include "Task.h"
 #include "SourceLocation/SourceLocation.h"
 #include "Logger/Logger.h"
@@ -90,3 +92,5 @@ void Task::cancelByHandle(TaskHandle_t handle) noexcept
     if (eTaskGetState(&handle) != eTaskState::eDeleted)
         vTaskDelete(handle);
 }
+
+#endif
