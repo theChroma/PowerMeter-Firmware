@@ -37,7 +37,7 @@ namespace
 
 WifiScan::WifiScan(uint32_t timeout_ms)
 {
-    WiFi.scanNetworks(true);
+    WiFi.scanNetworks(true, false, true);
     uint32_t startTime = millis();
     while (true)
     {

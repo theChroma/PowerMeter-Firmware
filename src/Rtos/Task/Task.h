@@ -5,7 +5,8 @@
 #include <freertos/task.h>
 #include <functional>
 #include <string>
-#include <memory>
+#include <unique_resource.hpp>
+#include <tl/optional.hpp>
 
 namespace Rtos
 {
@@ -17,7 +18,7 @@ namespace Rtos
             const char* name,
             uint8_t priority,
             size_t stackSize_B,
-            const Code& code,
+            Code code,
             CpuCore executionCore = CpuCore::Auto
         );
 
@@ -27,12 +28,17 @@ namespace Rtos
         void cancel();
 
     private:
-
-        Task(TaskHandle_t handle);
+        Task(TaskHandle_t handle) noexcept;
         static void taskFunction(Task& task) noexcept;
         static void cancelByHandle(TaskHandle_t handle) noexcept;
 
         Code m_code;
-        std::shared_ptr<void> m_handle;
+
+        tl::optional<
+            std_experimental::unique_resource<
+                TaskHandle_t,
+                std::function<void(TaskHandle_t)>
+            >
+        > m_handle;
     };
 }

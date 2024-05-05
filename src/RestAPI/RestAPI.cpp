@@ -67,7 +67,6 @@ void RestApi::handle(const std::string &uri, WebRequestMethod method, const Json
         JsonResponse jsonResponse(json(), 500);
         try
         {
-            Logger[LogLevel::Debug] << "Request URL: " << request->url().c_str() << std::endl;
             Version requestedApiVersion(request->pathArg(0).c_str());
             if (requestedApiVersion > m_apiVersion)
             {
@@ -116,6 +115,7 @@ void RestApi::handle(const std::string &uri, WebRequestMethod method, const Json
         for (const auto& header : jsonResponse.headers)
             response->addHeader(header.first.c_str(), header.second.c_str());
         request->send(response);
+        delay(100);
         jsonResponse.doAfterSend();
     };
 

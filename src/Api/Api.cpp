@@ -91,8 +91,8 @@ void Api::createSystemEndpoints(RestApi& restApi, const Version& firmwareVersion
                     {"usedBytes", LittleFS.usedBytes()},
                 }},
                 {"heap", {
-                    {"totalBytes", ESP.getHeapSize() - ESP.getMinFreeHeap()},
-                    {"usedBytes", ESP.getHeapSize()},
+                    {"totalBytes", ESP.getHeapSize()},
+                    {"usedBytes", ESP.getHeapSize() - ESP.getMinFreeHeap()},
                 }},
             }}
         };
@@ -349,10 +349,14 @@ void Api::createNetworkEndpoints(RestApi& restApi, JsonResource &configResource)
     });
 
     restApi.handle("/network/config/restore-default", HTTP_POST, [&configResource](RestApi::JsonRequest){
-        json defaultConfigJson = Config::getNetworkDefault();
-        Config::configureNetwork(defaultConfigJson);
-        configResource.serialize(defaultConfigJson);
-        return defaultConfigJson;
+        RestApi::JsonResponse response = Config::getNetworkDefault();
+        Logger[LogLevel::Debug] << response.data.dump(2, ' ') << std::endl;
+        response.doAfterSend = [&configResource, response]{
+            json configJson = response.data;
+            Config::configureNetwork(configJson);
+            configResource.serialize(configJson);
+        };
+        return response;
     });
 
     restApi.handle("/network/scan", HTTP_GET, [](RestApi::JsonRequest){

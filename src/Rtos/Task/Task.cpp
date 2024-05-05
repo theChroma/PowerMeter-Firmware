@@ -8,15 +8,16 @@
 #include <utility>
 
 using namespace Rtos;
+using namespace std_experimental;
+
 
 Task::Task(
     const char* name,
     uint8_t priority,
     size_t stackSize_B,
-    const Code& code,
+    Code code,
     CpuCore executionCore
-) :
-    m_code(code)
+) : m_code(std::move(code))
 {
     TaskHandle_t handle = nullptr;
     BaseType_t status = xTaskCreateUniversal(
@@ -34,14 +35,12 @@ Task::Task(
     {
         throw std::runtime_error(SOURCE_LOCATION + "Failed to create task \"" + name + "\"");
     }
-    m_handle = std::shared_ptr<void>(handle, cancelByHandle);
+    m_handle = unique_resource<TaskHandle_t, std::function<void(TaskHandle_t)>>(std::move(handle), cancelByHandle);
 }
 
-Task::Task(TaskHandle_t handle)
-{
-    m_handle = std::shared_ptr<void>(handle, cancelByHandle);
-}
-
+Task::Task(TaskHandle_t handle) noexcept :
+    m_handle(unique_resource<TaskHandle_t, std::function<void(TaskHandle_t)>>(std::move(handle), cancelByHandle))
+{}
 
 Task Task::getCurrent()
 {
@@ -54,13 +53,13 @@ Task Task::getCurrent()
 
 const char* Task::getName() const
 {
-    return pcTaskGetName(m_handle.get());
+    return pcTaskGetName(m_handle.value().get());
 }
 
 
 void Task::cancel()
 {
-    Task::cancelByHandle(m_handle.get());
+    Task::cancelByHandle(m_handle.value().get());
 }
 
 
