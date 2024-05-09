@@ -268,7 +268,7 @@ void Api::createTrackerEndpoints(
             const std::string& trackerId = requestJsonItems.key();
             if (trackers.find(trackerId) != trackers.end())
             {
-                Tracker tracker = trackers.at(trackerId);
+                Tracker& tracker = trackers.at(trackerId);
                 tracker.setData(requestJsonItems.value());
                 responseJson[trackerId] = tracker.getData();
             }

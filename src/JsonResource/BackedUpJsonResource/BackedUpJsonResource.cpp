@@ -11,38 +11,16 @@
 #include <fstream>
 #include <map>
 
-namespace
+
+BackedUpJsonResource::BackedUpJsonResource(BasicJsonResource resourceA, BasicJsonResource resourceB) noexcept :
+    m_resourceA(std::move(resourceA)),
+    m_resourceB(std::move(resourceB))
 {
-    time_t readLastModificationTime(const JsonResource& resource)
-    {
-        File file = LittleFS.open(resource.getFilePath().c_str());
-        time_t lastModificationTime = file ? file.getLastWrite() : 0;
-        file.close();
-        return lastModificationTime;
-    }
+    time_t lastWriteTimestampResourceA = resourceA.getFile().getLastWriteTimestamp();
+    time_t lastWriteTimestampResourceB = resourceB.getFile().getLastWriteTimestamp();
 
-
-    void correctLastModificationTime(const JsonResource& resource)
-    {
-        time_t now = 0;
-        time(&now);
-        time_t lastModificationTime = readLastModificationTime(resource);
-        // If last modification time is in future...
-        if (lastModificationTime > now)
-        {
-            // Set last modification time to now
-            std::ofstream file(resource.getFilePath(), std::ios::app);
-        }
-    }
-}
-
-
-BackedUpJsonResource::BackedUpJsonResource(const std::string& filePath, bool useCaching) noexcept :
-    JsonResource(filePath, useCaching),
-    m_resources(getResources())
-{
-    correctLastModificationTime(m_resources[0]);
-    correctLastModificationTime(m_resources[1]);
+    m_preferredResourceForRead = lastWriteTimestampResourceA > lastWriteTimestampResourceB ? resourceA : resourceB;
+    m_preferredResourceForWrite = lastWriteTimestampResourceA > lastWriteTimestampResourceB ? resourceB : resourceA;
 }
 
 
@@ -50,16 +28,13 @@ json BackedUpJsonResource::deserialize() const
 {
     try
     {
-        bool preferredResourceIndex = getLastModifiedResourceIndex();
-        return m_resources[preferredResourceIndex].deserializeOrGet([this, preferredResourceIndex]{
-            return m_resources[!preferredResourceIndex].deserializeOrGet([this]{
-                return JsonResource::deserialize();
-            });
+        return m_preferredResourceForRead->deserializeOrGet([this]{
+            return m_preferredResourceForWrite->deserialize();
         });
     }
     catch(...)
     {
-        ExceptionTrace::trace(SOURCE_LOCATION + "Failed to deserialize \"" + std::string(*this) + "\"");
+        ExceptionTrace::trace(SOURCE_LOCATION + "Failed to deserialize");
         throw;
     }
 }
@@ -68,58 +43,29 @@ void BackedUpJsonResource::serialize(const json &data)
 {
     try
     {
-        bool resourceIndex = !getLastModifiedResourceIndex();
-        m_resources[resourceIndex].serialize(data);
-        m_cachedLastModifiedResourceIndex = resourceIndex;
+        m_preferredResourceForWrite.get().serialize(data);
+        std::swap(m_preferredResourceForRead, m_preferredResourceForWrite);
     }
     catch(...)
     {
-        ExceptionTrace::trace(SOURCE_LOCATION + "Failed to serialize \"" + std::string(*this) + "\"");
+        ExceptionTrace::trace(SOURCE_LOCATION + "Failed to serialize");
         throw;
     }
 }
 
 
-void BackedUpJsonResource::erase()
+void BackedUpJsonResource::remove()
 {
     try
     {
-        m_resources[0].erase();
-        m_resources[1].erase();
-        JsonResource::erase();
+        m_preferredResourceForRead->remove();
+        m_preferredResourceForWrite->remove();
     }
     catch(...)
     {
-        ExceptionTrace::trace(SOURCE_LOCATION + "Failed to erase \"" + std::string(*this) + "\"");
+        ExceptionTrace::trace(SOURCE_LOCATION + "Failed to remove");
         throw;
     }
-}
-
-
-std::array<JsonResource, 2> BackedUpJsonResource::getResources() const
-{
-    std::string filePath = getFilePath();
-    size_t fileExtensionIndex = filePath.rfind('.');
-    if (fileExtensionIndex == std::string::npos)
-        fileExtensionIndex = filePath.length() - 1;
-
-    return {
-        JsonResource(std::string(filePath).insert(fileExtensionIndex, ".a"), false),
-        JsonResource(std::string(filePath).insert(fileExtensionIndex, ".b"), false),
-    };
-}
-
-
-bool BackedUpJsonResource::getLastModifiedResourceIndex() const
-{
-    return m_cachedLastModifiedResourceIndex.getCached([this]{
-        time_t lastModificationTimes[2] = {
-            readLastModificationTime(m_resources[0]),
-            readLastModificationTime(m_resources[1]),
-        };
-        bool lastModifiedResourceIndex = lastModificationTimes[0] <= lastModificationTimes[1];
-        return lastModifiedResourceIndex;
-    });
 }
 
 #endif

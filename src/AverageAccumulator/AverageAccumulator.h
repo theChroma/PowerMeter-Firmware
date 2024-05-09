@@ -6,12 +6,12 @@
 class AverageAccumulator
 {
 public:
-    AverageAccumulator(std::shared_ptr<JsonResource> storageResource);
+    AverageAccumulator(std::unique_ptr<JsonResource> storageResource);
     float getAverage() const noexcept;
     size_t getCount() const noexcept;
     float add(float value, size_t count = 1);
     void reset();
-    void erase();
+    void remove();
 
 private:
     struct Values
@@ -25,5 +25,5 @@ private:
     Values deserialize() const noexcept;
     float calculateAverage(const Values& values) const noexcept;
 
-    std::shared_ptr<JsonResource> m_storageResource;
+    std::unique_ptr<JsonResource> m_storageResource;
 };

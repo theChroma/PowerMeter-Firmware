@@ -2,10 +2,10 @@
 #include "ScopeProfiler/ScopeProfiler.h"
 #include "ExceptionTrace/ExceptionTrace.h"
 #include "SourceLocation/SourceLocation.h"
+#include <utility>
 
-
-AverageAccumulator::AverageAccumulator(std::shared_ptr<JsonResource> storageResource) :
-    m_storageResource(storageResource)
+AverageAccumulator::AverageAccumulator(std::unique_ptr<JsonResource> storageResource) :
+    m_storageResource(std::move(storageResource))
 {}
 
 
@@ -46,9 +46,9 @@ void AverageAccumulator::reset()
 }
 
 
-void AverageAccumulator::erase()
+void AverageAccumulator::remove()
 {
-    m_storageResource->erase();
+    m_storageResource->remove();
 }
 
 

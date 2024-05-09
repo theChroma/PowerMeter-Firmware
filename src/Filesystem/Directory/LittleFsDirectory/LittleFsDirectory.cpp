@@ -11,12 +11,11 @@
 
 using namespace Filesystem;
 
-
 LittleFsDirectory::LittleFsDirectory(std::string path) noexcept : m_path(std::move(path))
 {}
 
 
-std::vector<std::unique_ptr<Entry>> LittleFsDirectory::getEntries() const
+Directory::Entries LittleFsDirectory::getEntries() const
 {
     auto directory = std_experimental::unique_resource<DIR*, std::function<int(DIR*)>>(
         opendir(m_path.c_str()),
@@ -24,15 +23,18 @@ std::vector<std::unique_ptr<Entry>> LittleFsDirectory::getEntries() const
     );
     if (!directory)
         throw std::runtime_error(SOURCE_LOCATION + "Failed to open directory at \"" + m_path + '"');
+
     struct dirent* directoryEntry;
-    std::vector<std::unique_ptr<Entry>> entries;
+    Entries entries([](const std::unique_ptr<Entry>& lhs, const std::unique_ptr<Entry>& rhs){
+        return lhs->getPath() == rhs->getPath();
+    });
     while (directoryEntry = readdir(directory))
     {
         std::string entryPath = m_path + '/' + directoryEntry->d_name;
         if (directoryEntry->d_type == DT_DIR)
-            entries.emplace_back(new LittleFsDirectory(entryPath));
+            entries.emplace(new LittleFsDirectory(entryPath));
         else
-            entries.emplace_back(new LittleFsFile(entryPath));
+            entries.emplace(new LittleFsFile(entryPath));
     }
     return entries;
 }
@@ -77,7 +79,7 @@ void LittleFsDirectory::remove()
     Logger[LogLevel::Debug] << "Trying to remove dir " << m_path << std::endl;
     while (true)
     {
-        std::vector<std::unique_ptr<Entry>> entries = getEntries();
+        Entries entries = getEntries();
         if (entries.empty())
             break;
         for (const auto& entry : entries)

@@ -8,6 +8,7 @@
 #include "MeasuringUnit/AcMeasuringUnit/AcMeasuringUnit.h"
 #include "MeasuringUnit/SimulationMeasuringUnit/SimulationMeasuringUnit.h"
 #include "JsonResource/BackedUpJsonResource/BackedUpJsonResource.h"
+#include "Filesystem/Directory/LittleFsDirectory/LittleFsDirectory.h"
 #include "Switch/NoSwitch/NoSwitch.h"
 #include "Switch/Relay/Relay.h"
 #include "ExceptionTrace/ExceptionTrace.h"
@@ -424,28 +425,39 @@ TrackerMap Config::configureTrackers(const json& configJson, std::reference_wrap
     TrackerMap trackers;
     try
     {
+        Filesystem::LittleFsDirectory trackersDirectory("/Trackers");
+        Filesystem::Directory::Entries toBeRemovedEntries = trackersDirectory.getEntries();
         for(const auto& trackerJson : configJson.at("trackers").items())
         {
-            std::string key = trackerJson.key();
-            std::stringstream trackerDirectory;
-            trackerDirectory << "/Trackers/" << key << '/';
+            const std::string& trackerId = trackerJson.key();
+            Filesystem::Directory::Entries::iterator toBeKeptEntryPosition = std::find_if(
+                toBeRemovedEntries.begin(),
+                toBeRemovedEntries.end(),
+                [trackerId](const std::unique_ptr<Filesystem::Entry>& entry){
+                    return entry->getName() == trackerId;
+                }
+            );
+            if (toBeKeptEntryPosition != toBeRemovedEntries.end())
+                toBeRemovedEntries.erase(toBeKeptEntryPosition);
 
-            trackers.emplace(key, Tracker(
+            std::string trackerDirectoryPath = trackersDirectory.getPath() + '/' + trackerId;
+
+            trackers.emplace(trackerId, Tracker(
                 trackerJson.value().at("title"),
                 trackerJson.value().at("duration_s"),
                 trackerJson.value().at("sampleCount"),
                 clock,
-                std::shared_ptr<BackedUpJsonResource>(
+                std::unique_ptr<BackedUpJsonResource>(
                     new BackedUpJsonResource(trackerDirectory.str() + "data.json")
                 ),
-                std::shared_ptr<BackedUpJsonResource>(
+                std::unique_ptr<BackedUpJsonResource>(
                     new BackedUpJsonResource(trackerDirectory.str() + "lastInputTimestamp.json")
                 ),
-                std::shared_ptr<BackedUpJsonResource>(
+                std::unique_ptr<BackedUpJsonResource>(
                     new BackedUpJsonResource(trackerDirectory.str() + "lastSampleTimestamp.json")
                 ),
                 AverageAccumulator(
-                    std::shared_ptr<BackedUpJsonResource>(
+                    std::unique_ptr<BackedUpJsonResource>(
                         new BackedUpJsonResource(trackerDirectory.str() + "accumulator.json")
                     )
                 )

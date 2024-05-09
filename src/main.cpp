@@ -7,6 +7,7 @@
 #include "ExceptionTrace/ExceptionTrace.h"
 #include "MeasuringUnit/MeasuringUnit.h"
 #include "JsonResource/BackedUpJsonResource/BackedUpJsonResource.h"
+#include "JsonResource/BasicJsonResource/BasicJsonResource.h"
 #include "ScopeProfiler/ScopeProfiler.h"
 #include "FileBrowser/FileBrowser.h"
 #include "Filesystem/Directory/LittleFsDirectory/LittleFsDirectory.h"
@@ -30,7 +31,14 @@ void setup()
         if (!LittleFS.begin(true, "", 30))
             throw std::runtime_error("Failed to mount Filesystem");
 
-        static BackedUpJsonResource switchConfigResource("/Config/Switch.json");
+        static BackedUpJsonResource switchConfigResource(
+            std::unique_ptr<JsonResource>(new BasicJsonResource(
+                std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Switch.a.json"))
+            )),
+            std::unique_ptr<JsonResource>(new BasicJsonResource(
+                std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Switch.b.json"))
+            )),
+        );
         static BackedUpJsonResource loggerConfigResource("/Config/Logger.json");
         static BackedUpJsonResource networkConfigResource("/Config/Network.json");
         static BackedUpJsonResource measuringConfigResource("/Config/Measuring.json");
@@ -86,22 +94,6 @@ void setup()
         Api::createMeasuringEndpoints(restApi, measuringConfigResource, measuringUnit, measurementsValueMutex);
 
         Logger[LogLevel::Info] << "Boot sequence finished. Running..." << std::endl;
-
-        {
-            using namespace Filesystem;
-            LittleFsFile("/dir/file.txt").create();
-            LittleFsFile("/dir/sub1/file.txt").create();
-            LittleFsFile("/dir/sub2/file.txt").create();
-            LittleFsFile("/dir/sub2/file1.txt").create();
-            LittleFsDirectory("/dir/emptydir").create();
-        }
-
-        {
-            ScopeProfiler profiler("dirtest");
-            using namespace Filesystem;
-            LittleFsDirectory dir("/dir");
-            dir.remove();
-        }
 
         static Rtos::Task measuringTask("Measuring", 10, 3000, [](Rtos::Task& task){
                 while (true)

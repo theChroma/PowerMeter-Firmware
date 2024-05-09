@@ -1,32 +1,15 @@
 #pragma once
 
-#include "CachedValue/CachedValue.h"
-#include <json.hpp>
+#include <Filesystem/File/File.h>
 #include <functional>
-#include <tl/optional.hpp>
+#include <json.hpp>
 
 class JsonResource
 {
 public:
-    JsonResource(const std::string& filePath, bool useCaching = true) noexcept;
-
-    virtual json deserialize() const;
-    virtual json deserializeOr(const json& defaultJson) const;
-    virtual json deserializeOrGet(const std::function<json()>& getDefaultJson) const;
-    virtual void serialize(const json& data);
-    virtual void erase();
-
-    void setFilePath(const std::string& path) noexcept;
-    std::string getFilePath() const noexcept;
-
-    operator std::string() const noexcept;
-
-protected:
-    CachedValue<json> m_cachedData;
-
-private:
-    mutable bool m_directoryExists = false;
-    std::string m_filePath;
+    virtual json deserialize() const = 0;
+    virtual void serialize(const json& data) = 0;
+    virtual void remove() = 0;
+    json deserializeOr(const json& defaultJson) const;
+    json deserializeOrGet(const std::function<json()>& getDefaultJson) const;
 };
-
-std::ostream& operator<<(std::ostream& os, const JsonResource& jsonResource) noexcept;

@@ -1,23 +1,19 @@
 #pragma once
 
-#include "JsonResource/JsonResource.h"
-#include "CachedValue/CachedValue.h"
-#include <array>
-
+#include "JsonResource/BasicJsonResource/BasicJsonResource.h"
 
 class BackedUpJsonResource : public JsonResource
 {
 public:
-    BackedUpJsonResource(const std::string& path, bool useCaching = true) noexcept;
+    BackedUpJsonResource(BasicJsonResource resourceA, BasicJsonResource resourceB) noexcept;
 
     json deserialize() const override;
     void serialize(const json& data) override;
-    void erase() override;
+    void remove() override;
 
 private:
-    std::array<JsonResource, 2> getResources() const;
-    bool getLastModifiedResourceIndex() const;
-
-    CachedValue<bool> m_cachedLastModifiedResourceIndex;
-    std::array<JsonResource, 2> m_resources;
+    BasicJsonResource m_resourceA;
+    BasicJsonResource m_resourceB;
+    std::reference_wrapper<BasicJsonResource> m_preferredResourceForRead;
+    std::reference_wrapper<BasicJsonResource> m_preferredResourceForWrite;
 };

@@ -8,7 +8,7 @@ namespace Filesystem
     {
     public:
         LittleFsDirectory(std::string path) noexcept;
-        std::vector<std::unique_ptr<Entry>> getEntries() const override;
+        Entries getEntries() const override;
         std::string getPath() const override;
         std::string getName() const override;
         bool exists() const;
