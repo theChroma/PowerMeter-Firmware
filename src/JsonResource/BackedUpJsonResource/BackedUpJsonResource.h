@@ -5,7 +5,7 @@
 class BackedUpJsonResource : public JsonResource
 {
 public:
-    BackedUpJsonResource(BasicJsonResource resourceA, BasicJsonResource resourceB) noexcept;
+    BackedUpJsonResource(BasicJsonResource resourceA, BasicJsonResource resourceB);
 
     json deserialize() const override;
     void serialize(const json& data) override;
@@ -14,6 +14,6 @@ public:
 private:
     BasicJsonResource m_resourceA;
     BasicJsonResource m_resourceB;
-    std::reference_wrapper<BasicJsonResource> m_preferredResourceForRead;
-    std::reference_wrapper<BasicJsonResource> m_preferredResourceForWrite;
+    BasicJsonResource* m_preferredResourceForRead;
+    BasicJsonResource* m_preferredResourceForWrite;
 };

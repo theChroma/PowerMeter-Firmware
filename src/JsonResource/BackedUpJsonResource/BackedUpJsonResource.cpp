@@ -1,26 +1,29 @@
-#ifdef ESP32
-
 #include "BackedUpJsonResource.h"
 #include "ExceptionTrace/ExceptionTrace.h"
 #include "SourceLocation/SourceLocation.h"
 #include "Logger/Logger.h"
-#include "ScopeProfiler/ScopeProfiler.h"
-#include <string>
-#include <LittleFS.h>
 #include <sys/time.h>
-#include <fstream>
-#include <map>
 
 
-BackedUpJsonResource::BackedUpJsonResource(BasicJsonResource resourceA, BasicJsonResource resourceB) noexcept :
+BackedUpJsonResource::BackedUpJsonResource(BasicJsonResource resourceA, BasicJsonResource resourceB) :
     m_resourceA(std::move(resourceA)),
-    m_resourceB(std::move(resourceB))
+    m_resourceB(std::move(resourceB)),
+    m_preferredResourceForRead(&m_resourceA),
+    m_preferredResourceForWrite(&m_resourceB)
 {
-    time_t lastWriteTimestampResourceA = resourceA.getFile().getLastWriteTimestamp();
-    time_t lastWriteTimestampResourceB = resourceB.getFile().getLastWriteTimestamp();
+    time_t lastWriteTimestampResourceA = 0;
+    time_t lastWriteTimestampResourceB = 0;
+    try
+    {
+        lastWriteTimestampResourceA = m_resourceA.getFile().getLastWriteTimestamp();
+        lastWriteTimestampResourceB = m_resourceB.getFile().getLastWriteTimestamp();
+    }
+    catch(...)
+    {}
 
-    m_preferredResourceForRead = lastWriteTimestampResourceA > lastWriteTimestampResourceB ? resourceA : resourceB;
-    m_preferredResourceForWrite = lastWriteTimestampResourceA > lastWriteTimestampResourceB ? resourceB : resourceA;
+
+    m_preferredResourceForRead = lastWriteTimestampResourceA > lastWriteTimestampResourceB ? &m_resourceA : &m_resourceB;
+    m_preferredResourceForWrite = lastWriteTimestampResourceA > lastWriteTimestampResourceB ? &m_resourceB : &m_resourceA;
 }
 
 
@@ -43,7 +46,7 @@ void BackedUpJsonResource::serialize(const json &data)
 {
     try
     {
-        m_preferredResourceForWrite.get().serialize(data);
+        m_preferredResourceForWrite->serialize(data);
         std::swap(m_preferredResourceForRead, m_preferredResourceForWrite);
     }
     catch(...)
@@ -67,5 +70,3 @@ void BackedUpJsonResource::remove()
         throw;
     }
 }
-
-#endif

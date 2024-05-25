@@ -7,7 +7,7 @@ namespace Filesystem
     class LittleFsDirectory : public Directory
     {
     public:
-        LittleFsDirectory(std::string path) noexcept;
+        explicit LittleFsDirectory(std::string path) noexcept;
         Entries getEntries() const override;
         std::string getPath() const override;
         std::string getName() const override;

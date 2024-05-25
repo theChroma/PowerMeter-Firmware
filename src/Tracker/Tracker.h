@@ -13,7 +13,7 @@ public:
         std::string title,
         time_t duration_s,
         size_t sampleCount,
-        const Clock& clock,
+        const Clock* clock,
         std::unique_ptr<JsonResource> dataResource,
         std::unique_ptr<JsonResource> lastInputResource,
         std::unique_ptr<JsonResource> lastSampleResource,
@@ -31,7 +31,7 @@ private:
     std::string m_title;
     time_t m_duration_s;
     size_t m_sampleCount;
-    const Clock& m_clock;
+    const Clock* m_clock;
     std::unique_ptr<JsonResource> m_dataResource;
     std::unique_ptr<JsonResource> m_lastInputResource;
     std::unique_ptr<JsonResource> m_lastSampleResource;

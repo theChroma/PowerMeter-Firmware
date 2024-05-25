@@ -8,8 +8,19 @@
 #include <unique_resource.hpp>
 #include <dirent.h>
 #include <LittleFS.h>
+#include <functional>
 
 using namespace Filesystem;
+
+
+namespace
+{
+    bool compareEntries(const std::unique_ptr<Entry>& lhs, const std::unique_ptr<Entry>& rhs)
+    {
+        return lhs->getPath() < rhs->getPath();
+    }
+}
+
 
 LittleFsDirectory::LittleFsDirectory(std::string path) noexcept : m_path(std::move(path))
 {}
@@ -25,9 +36,7 @@ Directory::Entries LittleFsDirectory::getEntries() const
         throw std::runtime_error(SOURCE_LOCATION + "Failed to open directory at \"" + m_path + '"');
 
     struct dirent* directoryEntry;
-    Entries entries([](const std::unique_ptr<Entry>& lhs, const std::unique_ptr<Entry>& rhs){
-        return lhs->getPath() == rhs->getPath();
-    });
+    Entries entries(compareEntries);
     while (directoryEntry = readdir(directory))
     {
         std::string entryPath = m_path + '/' + directoryEntry->d_name;

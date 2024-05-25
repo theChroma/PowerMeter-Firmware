@@ -14,16 +14,16 @@
 
 namespace
 {
-    RestApi::JsonResponse getJsonResource(JsonResource& jsonResource)
+    RestApi::JsonResponse getJsonResource(const JsonResource* jsonResource)
     {
-        return RestApi::JsonResponse(jsonResource.deserialize());
+        return RestApi::JsonResponse(jsonResource->deserialize());
     }
 
 
-    RestApi::JsonResponse putJsonResource(JsonResource& jsonResource, const json& requestJson)
+    RestApi::JsonResponse putJsonResource(JsonResource* jsonResource, const json& requestJson)
     {
-        jsonResource.serialize(requestJson);
-        return jsonResource.deserialize();
+        jsonResource->serialize(requestJson);
+        return jsonResource->deserialize();
     }
 
 
@@ -73,9 +73,9 @@ namespace
 }
 
 
-void Api::createSystemEndpoints(RestApi& restApi, const Version& firmwareVersion, const Version& apiVersion)
+void Api::createSystemEndpoints(RestApi* restApi, const Version& firmwareVersion, const Version& apiVersion)
 {
-    restApi.handle("/info", HTTP_GET, [firmwareVersion, apiVersion](RestApi::JsonRequest){
+    restApi->handle("/info", HTTP_GET, [firmwareVersion, apiVersion](RestApi::JsonRequest){
         std::stringstream chipdId;
         chipdId << std::hex << ESP.getEfuseMac();
         return json {
@@ -98,7 +98,7 @@ void Api::createSystemEndpoints(RestApi& restApi, const Version& firmwareVersion
         };
     });
 
-    restApi.handle("/reboot", HTTP_POST, [](RestApi::JsonRequest){
+    restApi->handle("/reboot", HTTP_POST, [](RestApi::JsonRequest){
         return RestApi::JsonResponse(nullptr, 204, {}, []{
             Logger[LogLevel::Info] << "Rebooting PowerMeter..." << std::endl;
             ESP.restart();
@@ -107,168 +107,168 @@ void Api::createSystemEndpoints(RestApi& restApi, const Version& firmwareVersion
 }
 
 
-void Api::createLoggerEndpoints(RestApi& restApi, JsonResource& configResource, AsyncWebServer& server)
+void Api::createLoggerEndpoints(RestApi* restApi, JsonResource* configResource, AsyncWebServer* server)
 {
-    restApi.handle("/logger/config", HTTP_GET, [&configResource](RestApi::JsonRequest){
+    restApi->handle("/logger/config", HTTP_GET, [configResource](RestApi::JsonRequest){
         return getJsonResource(configResource);
     });
 
-    restApi.handle("/logger/config", HTTP_PATCH, [&configResource, &server](const RestApi::JsonRequest& request){
-        json configJson = configResource.deserialize();
+    restApi->handle("/logger/config", HTTP_PATCH, [configResource, server](const RestApi::JsonRequest& request){
+        json configJson = configResource->deserialize();
         patchJson(configJson, request.data);
         Config::configureLogger(configJson, server);
-        configResource.serialize(configJson);
+        configResource->serialize(configJson);
         return configJson;
     });
 
-    restApi.handle("/logger/config/default", HTTP_GET, [](RestApi::JsonRequest){
+    restApi->handle("/logger/config/default", HTTP_GET, [](RestApi::JsonRequest){
         return Config::getLoggerDefault();
     });
 
-    restApi.handle("/logger/config/restore-default", HTTP_POST, [&configResource, &server](RestApi::JsonRequest){
+    restApi->handle("/logger/config/restore-default", HTTP_POST, [configResource, server](RestApi::JsonRequest){
         json defaultConfigJson = Config::getLoggerDefault();
         Config::configureLogger(defaultConfigJson, server);
-        configResource.serialize(defaultConfigJson);
+        configResource->serialize(defaultConfigJson);
         return defaultConfigJson;
     });
 }
 
 
 void Api::createMeasuringEndpoints(
-    RestApi& restApi,
-    JsonResource& configResource,
-    std::reference_wrapper<MeasuringUnit>& measuringUnit,
-    const Rtos::ValueMutex<MeasurementList>& measurementsValueMutex
+    RestApi* restApi,
+    JsonResource* configResource,
+    MeasuringUnit** measuringUnit,
+    Rtos::ValueMutex<MeasurementList>* measurementsValueMutex
 )
 {
-    restApi.handle("/measurements", HTTP_GET, [&measurementsValueMutex](RestApi::JsonRequest){
+    restApi->handle("/measurements", HTTP_GET, [measurementsValueMutex](RestApi::JsonRequest){
         json responseJson = json::array_t();
-        MeasurementList measurements = measurementsValueMutex.get();
-        for (const auto& measurement : measurements)
+        Rtos::ValueMutex<MeasurementList>::Lock measurements = measurementsValueMutex->get();
+        for (const auto& measurement : *measurements)
             responseJson.push_back(measurement.toJson());
         return responseJson;
     });
 
-    restApi.handle("/measuring/config", HTTP_GET, [&configResource](RestApi::JsonRequest){
+    restApi->handle("/measuring/config", HTTP_GET, [configResource](RestApi::JsonRequest){
         return getJsonResource(configResource);
     });
 
-    restApi.handle("/measuring/config", HTTP_PATCH, [&configResource, &measuringUnit](const RestApi::JsonRequest& request){
-        json configJson = configResource.deserialize();
+    restApi->handle("/measuring/config", HTTP_PATCH, [configResource, measuringUnit](const RestApi::JsonRequest& request){
+        json configJson = configResource->deserialize();
         patchJson(configJson, request.data);
-        measuringUnit = Config::configureMeasuring(configJson);
-        configResource.serialize(configJson);
+        *measuringUnit = Config::configureMeasuring(configJson);
+        configResource->serialize(configJson);
         return configJson;
     });
 
-    restApi.handle("/measuring/config/default", HTTP_GET, [](RestApi::JsonRequest){
+    restApi->handle("/measuring/config/default", HTTP_GET, [](RestApi::JsonRequest){
         return Config::getMeasuringDefault();
     });
 
-    restApi.handle("/measuring/config/restore-default", HTTP_POST, [&configResource, &measuringUnit](RestApi::JsonRequest){
+    restApi->handle("/measuring/config/restore-default", HTTP_POST, [configResource, measuringUnit](RestApi::JsonRequest){
         json defaultConfigJson = Config::getMeasuringDefault();
-        measuringUnit = Config::configureMeasuring(defaultConfigJson);
-        configResource.serialize(defaultConfigJson);
+        *measuringUnit = Config::configureMeasuring(defaultConfigJson);
+        configResource->serialize(defaultConfigJson);
         return defaultConfigJson;
     });
 }
 
 
-void Api::createSwitchEndpoints(RestApi& restApi, JsonResource& configResource, std::reference_wrapper<Switch>& switchUnit)
+void Api::createSwitchEndpoints(RestApi* restApi, JsonResource* configResource, Switch** switchUnit)
 {
-    restApi.handle("/switch", HTTP_GET, [&switchUnit](RestApi::JsonRequest){
+    restApi->handle("/switch", HTTP_GET, [&switchUnit](RestApi::JsonRequest){
         json responseJson;
-        tl::optional<bool> state = switchUnit.get().getState();
+        tl::optional<bool> state = (*switchUnit)->getState();
         if (state.has_value())
             responseJson = state.value();
         return responseJson;
     });
 
-    restApi.handle("/switch", HTTP_PATCH, [&switchUnit](const RestApi::JsonRequest& request){
-        switchUnit.get().setState(request.data);
+    restApi->handle("/switch", HTTP_PATCH, [switchUnit](const RestApi::JsonRequest& request){
+        (*switchUnit)->setState(request.data);
         json responseJson;
-        tl::optional<bool> state = switchUnit.get().getState();
+        tl::optional<bool> state = (*switchUnit)->getState();
         if (state.has_value())
             responseJson = state.value();
         return responseJson;
     });
 
-    restApi.handle("/switch/config", HTTP_GET, [&configResource](RestApi::JsonRequest){
+    restApi->handle("/switch/config", HTTP_GET, [configResource](RestApi::JsonRequest){
         return getJsonResource(configResource);
     });
 
-    restApi.handle("/switch/config", HTTP_PATCH, [&configResource, &switchUnit](const RestApi::JsonRequest& request){
-        json configJson = configResource.deserialize();
+    restApi->handle("/switch/config", HTTP_PATCH, [configResource, switchUnit](const RestApi::JsonRequest& request){
+        json configJson = configResource->deserialize();
         patchJson(configJson, request.data);
-        switchUnit = Config::configureSwitch(configJson);
-        configResource.serialize(configJson);
+        *switchUnit = Config::configureSwitch(configJson);
+        configResource->serialize(configJson);
         return configJson;
     });
 
-    restApi.handle("/switch/config/default", HTTP_GET, [](RestApi::JsonRequest){
+    restApi->handle("/switch/config/default", HTTP_GET, [](RestApi::JsonRequest){
         return Config::getSwitchDefault();
     });
 
-    restApi.handle("/switch/config/restore-default", HTTP_POST, [&configResource, &switchUnit](RestApi::JsonRequest){
+    restApi->handle("/switch/config/restore-default", HTTP_POST, [configResource, switchUnit](RestApi::JsonRequest){
         json defaultConfigJson = Config::getSwitchDefault();
-        switchUnit = Config::configureSwitch(defaultConfigJson);
-        configResource.serialize(defaultConfigJson);
+        *switchUnit = Config::configureSwitch(defaultConfigJson);
+        configResource->serialize(defaultConfigJson);
         return defaultConfigJson;
     });
 }
 
 
-void Api::createClockEndpoints(RestApi& restApi, JsonResource& configResource, std::reference_wrapper<Clock>& clock)
+void Api::createClockEndpoints(RestApi* restApi, JsonResource* configResource, Clock** clock)
 {
-    restApi.handle("/clock/config", HTTP_GET, [&configResource](RestApi::JsonRequest){
+    restApi->handle("/clock/config", HTTP_GET, [configResource](RestApi::JsonRequest){
         return getJsonResource(configResource);
     });
 
-    restApi.handle("/clock/config", HTTP_PATCH, [&configResource, &clock](const RestApi::JsonRequest& request){
-        json configJson = configResource.deserialize();
+    restApi->handle("/clock/config", HTTP_PATCH, [configResource, clock](const RestApi::JsonRequest& request){
+        json configJson = configResource->deserialize();
         patchJson(configJson, request.data);
-        clock = Config::configureClock(configJson);
-        configResource.serialize(configJson);
+        *clock = Config::configureClock(configJson);
+        configResource->serialize(configJson);
         return configJson;
     });
 
-    restApi.handle("/clock/config/default", HTTP_GET, [](RestApi::JsonRequest){
+    restApi->handle("/clock/config/default", HTTP_GET, [](RestApi::JsonRequest){
         return Config::getClockDefault();
     });
 
-    restApi.handle("/clock/config/restore-default", HTTP_POST, [&configResource, &clock](RestApi::JsonRequest){
+    restApi->handle("/clock/config/restore-default", HTTP_POST, [configResource, clock](RestApi::JsonRequest){
         json defaultConfigJson = Config::getClockDefault();
-        clock = Config::configureClock(defaultConfigJson);
-        configResource.serialize(defaultConfigJson);
+        *clock = Config::configureClock(defaultConfigJson);
+        configResource->serialize(defaultConfigJson);
         return defaultConfigJson;
     });
 }
 
 
 void Api::createTrackerEndpoints(
-    RestApi& restApi,
-    JsonResource& configResource,
-    Rtos::ValueMutex<TrackerMap>& trackersValueMutex,
-    Clock& clock
+    RestApi* restApi,
+    JsonResource* configResource,
+    Rtos::ValueMutex<TrackerMap>* trackersValueMutex,
+    const Clock* clock
 )
 {
-    restApi.handle("/trackers", HTTP_GET, [&trackersValueMutex](RestApi::JsonRequest){
-        TrackerMap trackers = trackersValueMutex;
+    restApi->handle("/trackers", HTTP_GET, [trackersValueMutex](RestApi::JsonRequest){
+        Rtos::ValueMutex<TrackerMap>::Lock trackers = trackersValueMutex->get();
         json responseJson = json::object_t();
-        for(const auto& tracker : trackers)
+        for(const auto& tracker : *trackers)
             responseJson[tracker.first] = tracker.second.getData();
         return RestApi::JsonResponse(responseJson);
     });
 
-    restApi.handle("/trackers", HTTP_PUT, [&trackersValueMutex](const RestApi::JsonRequest& request){
+    restApi->handle("/trackers", HTTP_PUT, [trackersValueMutex](const RestApi::JsonRequest& request){
         json responseJson = json::object_t();
         for(const auto& requestJsonItems : request.data.items())
         {
-            TrackerMap trackers = trackersValueMutex;
+            Rtos::ValueMutex<TrackerMap>::Lock trackers = trackersValueMutex->get();
             const std::string& trackerId = requestJsonItems.key();
-            if (trackers.find(trackerId) != trackers.end())
+            if (trackers->find(trackerId) != trackers->end())
             {
-                Tracker& tracker = trackers.at(trackerId);
+                Tracker& tracker = trackers->at(trackerId);
                 tracker.setData(requestJsonItems.value());
                 responseJson[trackerId] = tracker.getData();
             }
@@ -276,90 +276,90 @@ void Api::createTrackerEndpoints(
         return responseJson;
     });
 
-    restApi.handle("/trackers/config", HTTP_GET, [&configResource](RestApi::JsonRequest){
+    restApi->handle("/trackers/config", HTTP_GET, [configResource](RestApi::JsonRequest){
         return getJsonResource(configResource);
     });
 
-    restApi.handle("/trackers/config", HTTP_PATCH, [&configResource, &clock, &trackersValueMutex](const RestApi::JsonRequest& request){
-        json configJson = configResource.deserialize();
+    restApi->handle("/trackers/config", HTTP_PATCH, [configResource, clock, trackersValueMutex](const RestApi::JsonRequest& request){
+        json configJson = configResource->deserialize();
         patchJson(configJson, request.data);
-        trackersValueMutex = Config::configureTrackers(configJson, clock);
-        configResource.serialize(configJson);
+        *trackersValueMutex = Config::configureTrackers(configJson, clock);
+        configResource->serialize(configJson);
         return configJson;
     });
 
-    restApi.handle("/trackers/config", HTTP_POST, [&configResource, &trackersValueMutex, &clock](const RestApi::JsonRequest& request){
-        json configJson = configResource.deserialize();
+    restApi->handle("/trackers/config", HTTP_POST, [configResource, trackersValueMutex, clock](const RestApi::JsonRequest& request){
+        json configJson = configResource->deserialize();
         std::stringstream key;
         key << request.data.at("duration_s") << "_" << request.data.at("sampleCount");
         configJson["trackers"][key.str()] = request.data;
-        trackersValueMutex = Config::configureTrackers(configJson, clock);
-        configResource.serialize(configJson);
+        *trackersValueMutex = Config::configureTrackers(configJson, clock);
+        configResource->serialize(configJson);
         return RestApi::JsonResponse(configJson, 201);
     });
 
-    restApi.handle("/trackers/config/(.*)", HTTP_DELETE,
-        [&configResource, &trackersValueMutex, &clock](const RestApi::JsonRequest& request){
-            json configJson = configResource.deserialize();
+    restApi->handle("/trackers/config/(.*)", HTTP_DELETE,
+        [configResource, trackersValueMutex, clock](const RestApi::JsonRequest& request){
+            json configJson = configResource->deserialize();
             std::string trackerId = request.serverRequest.pathArg(1).c_str();
             if (!configJson.at("trackers").erase(trackerId))
                 throw std::runtime_error(SOURCE_LOCATION + " \"" + trackerId + "\" is not a valid tracker ID");
-            trackersValueMutex = Config::configureTrackers(configJson, clock);
-            configResource.serialize(configJson);
+            *trackersValueMutex = Config::configureTrackers(configJson, clock);
+            configResource->serialize(configJson);
             return RestApi::JsonResponse(configJson);
         }
     );
 
-    restApi.handle("/trackers/config/default", HTTP_GET, [](RestApi::JsonRequest){
+    restApi->handle("/trackers/config/default", HTTP_GET, [](RestApi::JsonRequest){
         return Config::getTrackersDefault();
     });
 
-    restApi.handle("/trackers/config/restore-default", HTTP_POST, [&configResource, &trackersValueMutex, &clock](RestApi::JsonRequest){
+    restApi->handle("/trackers/config/restore-default", HTTP_POST, [configResource, trackersValueMutex, clock](RestApi::JsonRequest){
         json defaultConfigJson = Config::getTrackersDefault();
-        trackersValueMutex = Config::configureTrackers(defaultConfigJson, clock);
-        configResource.serialize(defaultConfigJson);
+        *trackersValueMutex = Config::configureTrackers(defaultConfigJson, clock);
+        configResource->serialize(defaultConfigJson);
         return defaultConfigJson;
     });
 }
 
 
-void Api::createNetworkEndpoints(RestApi& restApi, JsonResource &configResource)
+void Api::createNetworkEndpoints(RestApi* restApi, JsonResource* configResource)
 {
-    restApi.handle("/network/config", HTTP_GET, [&configResource](RestApi::JsonRequest){
+    restApi->handle("/network/config", HTTP_GET, [configResource](RestApi::JsonRequest){
         return getJsonResource(configResource);
     });
 
-    restApi.handle("/network/config", HTTP_PATCH, [&configResource](const RestApi::JsonRequest& request){
-        RestApi::JsonResponse response = configResource.deserialize();
+    restApi->handle("/network/config", HTTP_PATCH, [configResource](const RestApi::JsonRequest& request){
+        RestApi::JsonResponse response = configResource->deserialize();
         patchJson(response.data, request.data, {
             "/version"_json_pointer,
             "/stationary/macAddress"_json_pointer,
             "/accesspoint/macAddress"_json_pointer,
         });
-        response.doAfterSend = [&configResource, response]{
+        response.doAfterSend = [configResource, response]{
             json configJson = response.data;
-            Config::configureNetwork(configJson);
-            configResource.serialize(configJson);
+            Config::configureNetwork(&configJson);
+            configResource->serialize(configJson);
         };
         return response;
     });
 
-    restApi.handle("/network/config/default", HTTP_GET, [](RestApi::JsonRequest){
+    restApi->handle("/network/config/default", HTTP_GET, [](RestApi::JsonRequest){
         return Config::getNetworkDefault();
     });
 
-    restApi.handle("/network/config/restore-default", HTTP_POST, [&configResource](RestApi::JsonRequest){
+    restApi->handle("/network/config/restore-default", HTTP_POST, [configResource](RestApi::JsonRequest){
         RestApi::JsonResponse response = Config::getNetworkDefault();
         Logger[LogLevel::Debug] << response.data.dump(2, ' ') << std::endl;
-        response.doAfterSend = [&configResource, response]{
+        response.doAfterSend = [configResource, response]{
             json configJson = response.data;
-            Config::configureNetwork(configJson);
-            configResource.serialize(configJson);
+            Config::configureNetwork(&configJson);
+            configResource->serialize(configJson);
         };
         return response;
     });
 
-    restApi.handle("/network/scan", HTTP_GET, [](RestApi::JsonRequest){
+    restApi->handle("/network/scan", HTTP_GET, [](RestApi::JsonRequest){
         return WifiScan().toJson();
     });
 }

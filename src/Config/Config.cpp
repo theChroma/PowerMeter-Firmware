@@ -9,6 +9,7 @@
 #include "MeasuringUnit/SimulationMeasuringUnit/SimulationMeasuringUnit.h"
 #include "JsonResource/BackedUpJsonResource/BackedUpJsonResource.h"
 #include "Filesystem/Directory/LittleFsDirectory/LittleFsDirectory.h"
+#include "Filesystem/File/LittleFsFile/LittleFsFile.h"
 #include "Switch/NoSwitch/NoSwitch.h"
 #include "Switch/Relay/Relay.h"
 #include "ExceptionTrace/ExceptionTrace.h"
@@ -25,20 +26,20 @@
 namespace
 {
     template<typename T>
-    using ImplementaitonMap = std::unordered_map<std::string, std::function<T&(const json&)>>;
+    using ImplementationMap = std::unordered_map<std::string, std::function<T*(const json&)>>;
 
 
     template<typename T>
-    std::reference_wrapper<T> configureImplementation(const json& configJson)
+    T* configureImplementation(const json& configJson)
     {
         static tl::optional<T> implementation;
         implementation.emplace(configJson);
-        return implementation.value();
+        return &implementation.value();
     }
 
 
     template<typename T>
-    std::reference_wrapper<T> getSelectedImplementation(const json& configJson, const ImplementaitonMap<T>& implementations)
+    T* getSelectedImplementation(const json& configJson, const ImplementationMap<T>& implementations)
     {
         try
         {
@@ -70,17 +71,14 @@ namespace
         return LogStream(minLevel, maxLevel, stream, showLevel);
     }
 
-    json getConfigJson(JsonResource& configResource, json defaultConfigJson)
+
+    json getConfigJson(JsonResource* configResource, const json& defaultConfigJson)
     {
         try
         {
-            json configJson = configResource.deserializeOrGet([&configResource, &defaultConfigJson]{
-                Logger[LogLevel::Info]
-                    << "Failed to deserialize \""
-                    << configResource
-                    << "\". Using default config."
-                    << std::endl;
-                configResource.serialize(defaultConfigJson);
+            json configJson = configResource->deserializeOrGet([&configResource, &defaultConfigJson]{
+                Logger[LogLevel::Info] << "Failed to deserialize config. Using default config." << std::endl;
+                configResource->serialize(defaultConfigJson);
                 return defaultConfigJson;
             });
 
@@ -89,15 +87,13 @@ namespace
             if (installedVersion.major != latestVersion.major)
             {
                 Logger[LogLevel::Info]
-                    << "Version of config resource \""
-                    << configResource
-                    << "\" (v"
+                    << "Version of current config (v"
                     << installedVersion
                     <<") is not compatible. Changing to v"
                     << latestVersion
                     << "."
                     << std::endl;
-                configResource.serialize(defaultConfigJson);
+                configResource->serialize(defaultConfigJson);
                 return defaultConfigJson;
             }
             return configJson;
@@ -131,7 +127,7 @@ json Config::getLoggerDefault() noexcept
 }
 
 
-void Config::configureLogger(JsonResource& configResource, AsyncWebServer& server)
+void Config::configureLogger(JsonResource* configResource, AsyncWebServer* server)
 {
     try
     {
@@ -142,7 +138,7 @@ void Config::configureLogger(JsonResource& configResource, AsyncWebServer& serve
         ExceptionTrace::trace(
             SOURCE_LOCATION +
             "Failed to configure logger from \"" +
-            static_cast<std::string>(configResource) +
+            // static_cast<std::string>(configResource) +
             "\""
         );
         throw;
@@ -150,7 +146,7 @@ void Config::configureLogger(JsonResource& configResource, AsyncWebServer& serve
 }
 
 
-void Config::configureLogger(const json &configJson, AsyncWebServer &server)
+void Config::configureLogger(const json& configJson, AsyncWebServer* server)
 {
     Logger[LogLevel::Info] << "Configuring Logger..." << std::endl;
     try
@@ -160,7 +156,7 @@ void Config::configureLogger(const json &configJson, AsyncWebServer &server)
         static std::ofstream logFile;
         std::string logFilePath = configJson.at("/file/filePath"_json_pointer);
         logFile.open(logFilePath);
-        server.on("/log", HTTP_GET, [logFilePath](AsyncWebServerRequest* request){
+        server->on("/log", HTTP_GET, [logFilePath](AsyncWebServerRequest* request){
             logFile.close();
             request->send(LittleFS, logFilePath.c_str(), "text/plain");
             logFile.open(logFilePath, std::ios::app);
@@ -218,7 +214,7 @@ json Config::getMeasuringDefault() noexcept
 }
 
 
-std::reference_wrapper<MeasuringUnit> Config::configureMeasuring(JsonResource &configResource)
+MeasuringUnit* Config::configureMeasuring(JsonResource* configResource)
 {
     try
     {
@@ -229,7 +225,7 @@ std::reference_wrapper<MeasuringUnit> Config::configureMeasuring(JsonResource &c
         ExceptionTrace::trace(
             SOURCE_LOCATION +
             "Failed to configure measuring from \"" +
-            static_cast<std::string>(configResource) +
+            // static_cast<std::string>(configResource) +
             "\""
         );
         throw;
@@ -237,12 +233,12 @@ std::reference_wrapper<MeasuringUnit> Config::configureMeasuring(JsonResource &c
 }
 
 
-std::reference_wrapper<MeasuringUnit> Config::configureMeasuring(const json& configJson)
+MeasuringUnit* Config::configureMeasuring(const json& configJson)
 {
     Logger[LogLevel::Info] << "Configuring measuring unit..." << std::endl;
     try
     {
-        ImplementaitonMap<MeasuringUnit> measuringUnits = {
+        ImplementationMap<MeasuringUnit> measuringUnits = {
             {"Ac", configureImplementation<AcMeasuringUnit>},
             {"Simulation", configureImplementation<SimulationMeasuringUnit>},
         };
@@ -272,7 +268,7 @@ json Config::getClockDefault() noexcept
 }
 
 
-std::reference_wrapper<Clock> Config::configureClock(JsonResource &configResource)
+Clock* Config::configureClock(JsonResource* configResource)
 {
     try
     {
@@ -283,7 +279,7 @@ std::reference_wrapper<Clock> Config::configureClock(JsonResource &configResourc
         ExceptionTrace::trace(
             SOURCE_LOCATION +
             "Failed to configure clock from \"" +
-            static_cast<std::string>(configResource) +
+            // static_cast<std::string>(configResource) +
             "\""
         );
         throw;
@@ -291,12 +287,12 @@ std::reference_wrapper<Clock> Config::configureClock(JsonResource &configResourc
 }
 
 
-std::reference_wrapper<Clock> Config::configureClock(const json& configJson)
+Clock* Config::configureClock(const json& configJson)
 {
     Logger[LogLevel::Info] << "Configuring clock..." << std::endl;
     try
     {
-        ImplementaitonMap<Clock> clocks = {
+        ImplementationMap<Clock> clocks = {
             {"DS3231", configureImplementation<DS3231>},
             {"Simulation", configureImplementation<SimulationClock>},
         };
@@ -326,7 +322,7 @@ json Config::getSwitchDefault() noexcept
 }
 
 
-std::reference_wrapper<Switch> Config::configureSwitch(JsonResource& configResource)
+Switch* Config::configureSwitch(JsonResource* configResource)
 {
     try
     {
@@ -337,7 +333,7 @@ std::reference_wrapper<Switch> Config::configureSwitch(JsonResource& configResou
         ExceptionTrace::trace(
             SOURCE_LOCATION +
             "Failed to configure switch from \"" +
-            static_cast<std::string>(configResource) +
+            // static_cast<std::string>(configResource) +
             "\""
         );
         throw;
@@ -345,16 +341,16 @@ std::reference_wrapper<Switch> Config::configureSwitch(JsonResource& configResou
 }
 
 
-std::reference_wrapper<Switch> Config::configureSwitch(const json& configJson)
+Switch* Config::configureSwitch(const json& configJson)
 {
     Logger[LogLevel::Info] << "Configuring switch..." << std::endl;
     try
     {
-        ImplementaitonMap<Switch> switches = {
+        ImplementationMap<Switch> switches = {
             {"None", configureImplementation<NoSwitch>},
             {"Relay", configureImplementation<Relay>},
         };
-        Switch& switchUnit = getSelectedImplementation<Switch>(configJson, switches);
+        Switch* switchUnit = getSelectedImplementation<Switch>(configJson, switches);
         return switchUnit;
     }
     catch (...)
@@ -400,7 +396,7 @@ json Config::getTrackersDefault() noexcept
 }
 
 
-TrackerMap Config::configureTrackers(JsonResource &configResource, std::reference_wrapper<Clock> clock)
+TrackerMap Config::configureTrackers(JsonResource* configResource, const Clock* clock)
 {
     try
     {
@@ -411,7 +407,7 @@ TrackerMap Config::configureTrackers(JsonResource &configResource, std::referenc
         ExceptionTrace::trace(
             SOURCE_LOCATION +
             "Failed to configure trackers from \"" +
-            static_cast<std::string>(configResource) +
+            // static_cast<std::string>(configResource) +
             "\""
         );
         throw;
@@ -419,14 +415,14 @@ TrackerMap Config::configureTrackers(JsonResource &configResource, std::referenc
 }
 
 
-TrackerMap Config::configureTrackers(const json& configJson, std::reference_wrapper<Clock> clock)
+TrackerMap Config::configureTrackers(const json& configJson, const Clock* clock)
 {
     Logger[LogLevel::Info] << "Configuring trackers..." << std::endl;
-    TrackerMap trackers;
     try
     {
         Filesystem::LittleFsDirectory trackersDirectory("/Trackers");
         Filesystem::Directory::Entries toBeRemovedEntries = trackersDirectory.getEntries();
+        TrackerMap trackers;
         for(const auto& trackerJson : configJson.at("trackers").items())
         {
             const std::string& trackerId = trackerJson.key();
@@ -447,34 +443,78 @@ TrackerMap Config::configureTrackers(const json& configJson, std::reference_wrap
                 trackerJson.value().at("duration_s"),
                 trackerJson.value().at("sampleCount"),
                 clock,
-                std::unique_ptr<BackedUpJsonResource>(
-                    new BackedUpJsonResource(trackerDirectory.str() + "data.json")
+                std::unique_ptr<JsonResource>(
+                    new BackedUpJsonResource(
+                        BasicJsonResource(
+                            std::unique_ptr<Filesystem::File>(
+                                new Filesystem::LittleFsFile(trackerDirectoryPath + "/data.a.json")
+                            )
+                        ),
+                        BasicJsonResource(
+                            std::unique_ptr<Filesystem::File>(
+                               new Filesystem::LittleFsFile(trackerDirectoryPath + "/data.b.json")
+                            )
+                        )
+                    )
                 ),
-                std::unique_ptr<BackedUpJsonResource>(
-                    new BackedUpJsonResource(trackerDirectory.str() + "lastInputTimestamp.json")
+                std::unique_ptr<JsonResource>(
+                    new BackedUpJsonResource(
+                        BasicJsonResource(
+                            std::unique_ptr<Filesystem::File>(
+                                new Filesystem::LittleFsFile(trackerDirectoryPath + "/lastInputTimestamp.a.json")
+                            )
+                        ),
+                        BasicJsonResource(
+                            std::unique_ptr<Filesystem::File>(
+                                new Filesystem::LittleFsFile(trackerDirectoryPath + "/lastInputTimestamp.b.json")
+                            )
+                        )
+                    )
                 ),
-                std::unique_ptr<BackedUpJsonResource>(
-                    new BackedUpJsonResource(trackerDirectory.str() + "lastSampleTimestamp.json")
+                std::unique_ptr<JsonResource>(
+                    new BackedUpJsonResource(
+                        BasicJsonResource(
+                            std::unique_ptr<Filesystem::File>(
+                                new Filesystem::LittleFsFile(trackerDirectoryPath + "/lastSampleTimestamp.a.json")
+                            )
+                        ),
+                        BasicJsonResource(
+                            std::unique_ptr<Filesystem::File>(
+                                new Filesystem::LittleFsFile(trackerDirectoryPath + "/lastSampleTimestamp.b.json")
+                            )
+                        )
+                    )
                 ),
                 AverageAccumulator(
-                    std::unique_ptr<BackedUpJsonResource>(
-                        new BackedUpJsonResource(trackerDirectory.str() + "accumulator.json")
+                    std::unique_ptr<JsonResource>(
+                        new BackedUpJsonResource(
+                            BasicJsonResource(
+                                std::unique_ptr<Filesystem::File>(
+                                    new Filesystem::LittleFsFile(trackerDirectoryPath + "/accumulator.a.json")
+                                )
+                            ),
+                            BasicJsonResource(
+                                std::unique_ptr<Filesystem::File>(
+                                    new Filesystem::LittleFsFile(trackerDirectoryPath + "/accumulator.b.json")
+                                )
+                            )
+                        )
                     )
                 )
             ));
         }
         Logger[LogLevel::Info] << "Trackers configured sucessfully." << std::endl;
+        return trackers;
     }
     catch (...)
     {
         ExceptionTrace::trace(SOURCE_LOCATION + "Failed to configure trackers");
         throw;
     }
-    return trackers;
 }
 
 
-json Config::getNetworkDefault()
+json Config::getNetworkDefault() noexcept
 {
     std::stringstream hostname;
     hostname << "powermeter-" << std::hex << ESP.getEfuseMac();
@@ -509,20 +549,20 @@ json Config::getNetworkDefault()
 }
 
 
-void Config::configureNetwork(JsonResource &configResource)
+void Config::configureNetwork(JsonResource* configResource)
 {
     try
     {
         json configJson = getConfigJson(configResource, getNetworkDefault());
-        configureNetwork(configJson);
-        configResource.serialize(configJson);
+        configureNetwork(&configJson);
+        configResource->serialize(configJson);
     }
     catch (...)
     {
         ExceptionTrace::trace(
             SOURCE_LOCATION +
             "Failed to configure network from \"" +
-            static_cast<std::string>(configResource) +
+            // static_cast<std::string>(configResource) +
             "\""
         );
         throw;
@@ -530,16 +570,16 @@ void Config::configureNetwork(JsonResource &configResource)
 }
 
 
-void Config::configureNetwork(json& configJson)
+void Config::configureNetwork(json* configJson)
 {
     Logger[LogLevel::Info] << "Configuring network..." << std::endl;
     try
     {
-        const std::string& hostname = configJson.at("hostname");;
+        const std::string& hostname = configJson->at("hostname");;
         WiFi.setHostname(hostname.c_str());
 
-        json& stationaryJson = configJson.at("stationary");
-        json& accesspointJson = configJson.at("accesspoint");
+        json& stationaryJson = configJson->at("stationary");
+        json& accesspointJson = configJson->at("accesspoint");
         bool accesspointAlwaysActive = accesspointJson.at("alwaysActive");
         WiFi.mode(WIFI_AP_STA);
         {

@@ -13,7 +13,7 @@ Tracker::Tracker(
     std::string title,
     time_t duration_s,
     size_t sampleCount,
-    const Clock& clock,
+    const Clock* clock,
     std::unique_ptr<JsonResource> dataResource,
     std::unique_ptr<JsonResource> lastInputResource,
     std::unique_ptr<JsonResource> lastSampleResource,
@@ -37,7 +37,7 @@ void Tracker::track(float value)
         if(!isfinite(value))
             value = 0.0f;
 
-        time_t now = m_clock.now();
+        time_t now = m_clock->now();
         time_t lastInputTimestamp = getTimestamp(*m_lastInputResource);
         time_t secondsSinceLastInput = now - lastInputTimestamp;
 
@@ -132,7 +132,7 @@ void Tracker::updateData(const std::vector<float>& newValues)
         }
 
         m_dataResource->serialize(values);
-        m_lastSampleResource->serialize(m_clock.now());
+        m_lastSampleResource->serialize(m_clock->now());
     }
     catch(...)
     {
@@ -153,7 +153,7 @@ time_t Tracker::getTimestamp(JsonResource& timestampResource) const
     catch(...)
     {
         ExceptionTrace::clear();
-        timestampResource.serialize(m_clock.now());
-        return m_clock.now();
+        timestampResource.serialize(m_clock->now());
+        return m_clock->now();
     }
 }

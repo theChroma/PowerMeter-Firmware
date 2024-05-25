@@ -10,7 +10,7 @@ namespace Filesystem
     {
     public:
 
-        using Entries = std::set<std::unique_ptr<Entry>, std::function<bool(std::unique_ptr<Entry>, std::unique_ptr<Entry>)>>;
+        using Entries = std::set<std::unique_ptr<Entry>, bool(*)(const std::unique_ptr<Entry>&, const std::unique_ptr<Entry>&)>;
         virtual Entries getEntries() const = 0;
         virtual void create() = 0;
         inline virtual ~Directory() noexcept = default;

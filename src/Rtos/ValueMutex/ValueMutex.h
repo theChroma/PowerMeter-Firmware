@@ -1,44 +1,71 @@
 #pragma once
 
-#include "Rtos/Mutex/Mutex.h"
 #include <mutex>
 
 namespace Rtos
 {
-    template<typename T>
+    template<typename T, typename Lockable = std::mutex>
     class ValueMutex
     {
     public:
+        class Lock
+        {
+        public:
+            Lock(T* value, Lockable& lockable) :
+                m_value(value),
+                m_lock(lockable)
+            {}
+
+            inline T* get() const
+            {
+                return m_value;
+            }
+
+            inline T& operator*() const
+            {
+                return *get();
+            }
+
+            inline T* operator->() const
+            {
+                return get();
+            }
+
+        private:
+            T* m_value;
+            std::unique_lock<Lockable> m_lock;
+        };
+
         ValueMutex() = default;
-        ValueMutex(const T& data) :
-            m_value(data)
+
+        ValueMutex(T value) noexcept :
+            m_value(std::move(value))
         {}
 
-        ValueMutex& assign(const T& data)
+        inline ValueMutex& assign(T data)
         {
-            std::lock_guard<std::mutex> lock(m_mutex);
-            m_value = data;
+            std::lock_guard<std::mutex> lock(m_lockable);
+            m_value = std::move(data);
             return *this;
         }
 
-        ValueMutex& operator=(const T& data)
+        inline ValueMutex& operator=(T data)
         {
-            return assign(data);
+            return assign(std::move(data));
         }
 
-        T get() const
+        inline Lock get()
         {
-            std::lock_guard<std::mutex> lock(m_mutex);
-            return m_value;
+            return Lock(&m_value, m_lockable);
         }
 
-        operator T() const
-        {
-            return get();
-        }
+        // inline operator Lock()
+        // {
+        //     return get();
+        // }
 
     private:
-        mutable std::mutex m_mutex;
+        Lockable m_lockable;
         T m_value;
     };
 }

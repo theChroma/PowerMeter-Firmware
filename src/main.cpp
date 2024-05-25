@@ -31,19 +31,49 @@ void setup()
         if (!LittleFS.begin(true, "", 30))
             throw std::runtime_error("Failed to mount Filesystem");
 
-        static BackedUpJsonResource switchConfigResource(
-            std::unique_ptr<JsonResource>(new BasicJsonResource(
-                std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Switch.a.json"))
-            )),
-            std::unique_ptr<JsonResource>(new BasicJsonResource(
-                std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Switch.b.json"))
-            )),
+        // static BackedUpJsonResource switchConfigResource(
+        //     BasicJsonResource(std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Switch.a.json"))),
+        //     BasicJsonResource(std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Switch.b.json")))
+        // );
+        // static BackedUpJsonResource loggerConfigResource(
+        //     BasicJsonResource(std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Logger.a.json"))),
+        //     BasicJsonResource(std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Logger.b.json")))
+        // );
+        // static BackedUpJsonResource networkConfigResource(
+        //     BasicJsonResource(std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Network.a.json"))),
+        //     BasicJsonResource(std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Network.b.json")))
+        // );
+        // static BackedUpJsonResource measuringConfigResource(
+        //     BasicJsonResource(std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Measuring.a.json"))),
+        //     BasicJsonResource(std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Measuring.b.json")))
+        // );
+        // static BackedUpJsonResource clockConfigResource(
+        //     BasicJsonResource(std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Clock.a.json"))),
+        //     BasicJsonResource(std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Clock.b.json")))
+        // );
+        // static BackedUpJsonResource trackerConfigResource(
+        //     BasicJsonResource(std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Tracker.a.json"))),
+        //     BasicJsonResource(std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Tracker.b.json")))
+        // );
+
+        static BasicJsonResource switchConfigResource(
+            std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Switch.json"))
         );
-        static BackedUpJsonResource loggerConfigResource("/Config/Logger.json");
-        static BackedUpJsonResource networkConfigResource("/Config/Network.json");
-        static BackedUpJsonResource measuringConfigResource("/Config/Measuring.json");
-        static BackedUpJsonResource clockConfigResource("/Config/Clock.json");
-        static BackedUpJsonResource trackerConfigResource("/Config/Trackers.json");
+        static BasicJsonResource loggerConfigResource(
+            std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Logger.json"))
+        );
+        static BasicJsonResource networkConfigResource(
+            std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Network.json"))
+        );
+        static BasicJsonResource measuringConfigResource(
+            std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Measuring.json"))
+        );
+        static BasicJsonResource clockConfigResource(
+            std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Clock.json"))
+        );
+        static BasicJsonResource trackerConfigResource(
+            std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Tracker.json"))
+        );
 
         static const Version firmwareVersion(
             POWERMETER_FIRMWARE_VERSION_MAJOR,
@@ -70,35 +100,35 @@ void setup()
             request->send(404, "text/plain", "Not Found");
         });
 
-        Config::configureLogger(loggerConfigResource, server);
+        Config::configureLogger(&loggerConfigResource, &server);
         Logger[LogLevel::Debug] << "Reset reason CPU Core 0: " << Rtos::CpuCore(Rtos::CpuCore::Core0).getResetReason() << std::endl;
         Logger[LogLevel::Debug] << "Reset reason CPU Core 1: " << Rtos::CpuCore(Rtos::CpuCore::Core1).getResetReason() << std::endl;
         Logger[LogLevel::Info] << "Booting..." << std::endl;
         Logger[LogLevel::Info] << "Firmware version v" << firmwareVersion << std::endl;
         Logger[LogLevel::Info] << "API version v" << apiVersion << std::endl;
-        Config::configureNetwork(networkConfigResource);
+        Config::configureNetwork(&networkConfigResource);
         server.begin();
-        static std::reference_wrapper<Switch> switchUnit = Config::configureSwitch(switchConfigResource);
-        static std::reference_wrapper<Clock> clock = Config::configureClock(clockConfigResource);
-        static std::reference_wrapper<MeasuringUnit> measuringUnit = Config::configureMeasuring(measuringConfigResource);
+        static Switch* switchUnit = Config::configureSwitch(&switchConfigResource);
+        static Clock* clock = Config::configureClock(&clockConfigResource);
+        static MeasuringUnit* measuringUnit = Config::configureMeasuring(&measuringConfigResource);
         static Rtos::ValueMutex<MeasurementList> measurementsValueMutex;
         static Rtos::ValueMutex<TrackerMap> trackersValueMutex;
-        trackersValueMutex = Config::configureTrackers(trackerConfigResource, clock);
+        trackersValueMutex = Config::configureTrackers(&trackerConfigResource, clock);
 
-        Api::createSystemEndpoints(restApi, firmwareVersion, apiVersion);
-        Api::createLoggerEndpoints(restApi, loggerConfigResource, server);
-        Api::createSwitchEndpoints(restApi, switchConfigResource, switchUnit);
-        Api::createClockEndpoints(restApi, clockConfigResource, clock);
-        Api::createTrackerEndpoints(restApi, trackerConfigResource, trackersValueMutex, clock);
-        Api::createNetworkEndpoints(restApi, networkConfigResource);
-        Api::createMeasuringEndpoints(restApi, measuringConfigResource, measuringUnit, measurementsValueMutex);
+        Api::createSystemEndpoints(&restApi, firmwareVersion, apiVersion);
+        Api::createLoggerEndpoints(&restApi, &loggerConfigResource, &server);
+        Api::createSwitchEndpoints(&restApi, &switchConfigResource, &switchUnit);
+        Api::createClockEndpoints(&restApi, &clockConfigResource, &clock);
+        Api::createTrackerEndpoints(&restApi, &trackerConfigResource, &trackersValueMutex, clock);
+        Api::createNetworkEndpoints(&restApi, &networkConfigResource);
+        Api::createMeasuringEndpoints(&restApi, &measuringConfigResource, &measuringUnit, &measurementsValueMutex);
 
         Logger[LogLevel::Info] << "Boot sequence finished. Running..." << std::endl;
 
         static Rtos::Task measuringTask("Measuring", 10, 3000, [](Rtos::Task& task){
                 while (true)
                 {
-                    measurementsValueMutex = measuringUnit.get().measure();
+                    measurementsValueMutex = measuringUnit->measure();
                     delay(1000);
                 }
             },
@@ -108,12 +138,13 @@ void setup()
         static Rtos::Task trackerTask("Tracker", 1, 8000, [](Rtos::Task& task){
             while (true)
             {
-                MeasurementList measurements = measurementsValueMutex;
-                if (measurements.size() == 0)
-                    continue;
-                TrackerMap trackers = trackersValueMutex;
-                for (auto& tracker : trackers)
-                    tracker.second.track(measurements.front().value);
+                Rtos::ValueMutex<MeasurementList>::Lock measurements = measurementsValueMutex.get();
+                if (measurements->size() > 0)
+                {
+                    Rtos::ValueMutex<TrackerMap>::Lock trackers = trackersValueMutex.get();
+                    for (auto& tracker : *trackers)
+                        tracker.second.track(measurements->front().value);
+                }
                 delay(1000);
             }
         });

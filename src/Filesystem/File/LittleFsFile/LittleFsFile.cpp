@@ -23,15 +23,17 @@ std::string Filesystem::LittleFsFile::getName() const
 }
 
 
-std::unique_ptr<std::iostream> LittleFsFile::open(std::ios::openmode mode)
+Filesystem::File::Stream LittleFsFile::open(std::ios::openmode mode)
 {
     if ((mode & std::ios::out) && !exists())
         create();
 
-    auto fileStream = std::unique_ptr<std::fstream>(new std::fstream(m_path, mode));
-    if (!fileStream->good())
+    m_fileStream.open(m_path, mode);
+    if (!m_fileStream.good())
         throw std::runtime_error(SOURCE_LOCATION + "Failed to open file at \"" + m_path + '"');
-    return fileStream;
+    return File::Stream(&m_fileStream, [this](std::iostream*){
+        m_fileStream.close();
+    });
 }
 
 

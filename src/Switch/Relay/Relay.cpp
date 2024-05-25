@@ -1,7 +1,8 @@
 #ifdef ESP32
 
 #include "Relay.h"
-#include "JsonResource/JsonResource.h"
+#include "JsonResource/BasicJsonResource/BasicJsonResource.h"
+#include "Filesystem/File/LittleFsFile/LittleFsFile.h"
 #include "ExceptionTrace/ExceptionTrace.h"
 #include "Logger/Logger.h"
 #include "SourceLocation/SourceLocation.h"
@@ -10,7 +11,11 @@
 
 namespace
 {
-    JsonResource stateResource("/Relay/State.json");
+    BasicJsonResource stateResource(
+        std::unique_ptr<Filesystem::File>(
+            new Filesystem::LittleFsFile("/Relay/State.json")
+        )
+    );
 }
 
 
