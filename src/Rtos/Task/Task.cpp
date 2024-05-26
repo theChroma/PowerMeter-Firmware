@@ -8,7 +8,6 @@
 #include <utility>
 
 using namespace Rtos;
-using namespace std_experimental;
 
 
 Task::Task(
@@ -21,7 +20,7 @@ Task::Task(
 {
     BaseType_t status = xTaskCreateUniversal(
         [](void* context){
-            taskFunction(*static_cast<Task*>(context));
+            taskFunction(static_cast<Task*>(context));
         },
         name,
         stackSize_B,
@@ -36,9 +35,11 @@ Task::Task(
     }
 }
 
+
 Task::Task(TaskHandle_t handle) noexcept :
-    m_handle(unique_resource<TaskHandle_t, std::function<void(TaskHandle_t)>>(std::move(handle), cancelByHandle))
+    m_handle(handle)
 {}
+
 
 Task Task::getCurrent()
 {
@@ -61,11 +62,11 @@ void Task::cancel()
 }
 
 
-void Task::taskFunction(Task& task) noexcept
+void Task::taskFunction(Task* task) noexcept
 {
     try
     {
-        task.m_code(task);
+        task->m_code(task);
     }
     catch (...)
     {
@@ -73,11 +74,11 @@ void Task::taskFunction(Task& task) noexcept
             << "Exception occurred at "
             << SOURCE_LOCATION
             << "in task \""
-            << task.getName()
+            << task->getName()
             << "\"\r\n"
             << ExceptionTrace::what() << std::endl;
     }
-    task.cancel();
+    task->cancel();
 }
 
 

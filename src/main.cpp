@@ -106,7 +106,7 @@ void setup()
 
         Logger[LogLevel::Info] << "Boot sequence finished. Running..." << std::endl;
 
-        Rtos::Task("Measuring", 10, 3000, [](Rtos::Task& task){
+        Rtos::Task("Measuring", 10, 3000, [](Rtos::Task* task){
                 while (true)
                 {
                     measurementsValueMutex = measuringUnit->measure();
@@ -116,7 +116,7 @@ void setup()
             Rtos::CpuCore::Core1
         );
 
-        Rtos::Task("Tracker", 1, 8000, [](Rtos::Task& task){
+        Rtos::Task("Tracker", 1, 8000, [](Rtos::Task* task){
             while (true)
             {
                 Rtos::ValueMutex<MeasurementList>::Lock measurements = measurementsValueMutex.get();
@@ -127,7 +127,6 @@ void setup()
                         tracker.second.track(measurements->front().value);
                 }
                 delay(1000);
-                Logger[LogLevel::Debug] << "tracking..." << std::endl;
             }
         });
     }

@@ -5,15 +5,13 @@
 #include <freertos/task.h>
 #include <functional>
 #include <string>
-#include <unique_resource.hpp>
-#include <tl/optional.hpp>
 
 namespace Rtos
 {
     class Task
     {
     public:
-        using Code = std::function<void(Task&)>;
+        using Code = std::function<void(Task*)>;
         Task(
             const char* name,
             uint8_t priority,
@@ -29,11 +27,10 @@ namespace Rtos
 
     private:
         Task(TaskHandle_t handle) noexcept;
-        static void taskFunction(Task& task) noexcept;
+        static void taskFunction(Task* task) noexcept;
         static void cancelByHandle(TaskHandle_t handle) noexcept;
 
         Code m_code;
-
         TaskHandle_t m_handle;
     };
 }
