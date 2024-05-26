@@ -34,11 +34,6 @@ namespace Rtos
 
         Code m_code;
 
-        tl::optional<
-            std_experimental::unique_resource<
-                TaskHandle_t,
-                std::function<void(TaskHandle_t)>
-            >
-        > m_handle;
+        TaskHandle_t m_handle;
     };
 }

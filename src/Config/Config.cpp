@@ -135,12 +135,7 @@ void Config::configureLogger(JsonResource* configResource, AsyncWebServer* serve
     }
     catch (...)
     {
-        ExceptionTrace::trace(
-            SOURCE_LOCATION +
-            "Failed to configure logger from \"" +
-            // static_cast<std::string>(configResource) +
-            "\""
-        );
+        ExceptionTrace::trace(SOURCE_LOCATION + "Failed to configure logger");
         throw;
     }
 }
@@ -222,12 +217,7 @@ MeasuringUnit* Config::configureMeasuring(JsonResource* configResource)
     }
     catch (...)
     {
-        ExceptionTrace::trace(
-            SOURCE_LOCATION +
-            "Failed to configure measuring from \"" +
-            // static_cast<std::string>(configResource) +
-            "\""
-        );
+        ExceptionTrace::trace(SOURCE_LOCATION + "Failed to configure measuring unit");
         throw;
     }
 }
@@ -276,12 +266,7 @@ Clock* Config::configureClock(JsonResource* configResource)
     }
     catch (...)
     {
-        ExceptionTrace::trace(
-            SOURCE_LOCATION +
-            "Failed to configure clock from \"" +
-            // static_cast<std::string>(configResource) +
-            "\""
-        );
+        ExceptionTrace::trace(SOURCE_LOCATION + "Failed to configure clock");
         throw;
     }
 }
@@ -330,12 +315,7 @@ Switch* Config::configureSwitch(JsonResource* configResource)
     }
     catch (...)
     {
-        ExceptionTrace::trace(
-            SOURCE_LOCATION +
-            "Failed to configure switch from \"" +
-            // static_cast<std::string>(configResource) +
-            "\""
-        );
+        ExceptionTrace::trace(SOURCE_LOCATION + "Failed to configure switch");
         throw;
     }
 }
@@ -404,12 +384,7 @@ TrackerMap Config::configureTrackers(JsonResource* configResource, const Clock* 
     }
     catch (...)
     {
-        ExceptionTrace::trace(
-            SOURCE_LOCATION +
-            "Failed to configure trackers from \"" +
-            // static_cast<std::string>(configResource) +
-            "\""
-        );
+        ExceptionTrace::trace(SOURCE_LOCATION + "Failed to configure trackers");
         throw;
     }
 }
@@ -421,7 +396,14 @@ TrackerMap Config::configureTrackers(const json& configJson, const Clock* clock)
     try
     {
         Filesystem::LittleFsDirectory trackersDirectory("/Trackers");
-        Filesystem::Directory::Entries toBeRemovedEntries = trackersDirectory.getEntries();
+        Filesystem::Directory::Entries toBeRemovedEntries;
+        try
+        {
+            toBeRemovedEntries = trackersDirectory.getEntries();
+        }
+        catch (...)
+        {}
+
         TrackerMap trackers;
         for(const auto& trackerJson : configJson.at("trackers").items())
         {
@@ -559,12 +541,7 @@ void Config::configureNetwork(JsonResource* configResource)
     }
     catch (...)
     {
-        ExceptionTrace::trace(
-            SOURCE_LOCATION +
-            "Failed to configure network from \"" +
-            // static_cast<std::string>(configResource) +
-            "\""
-        );
+        ExceptionTrace::trace(SOURCE_LOCATION + "Failed to configure network");
         throw;
     }
 }

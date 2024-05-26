@@ -31,48 +31,29 @@ void setup()
         if (!LittleFS.begin(true, "", 30))
             throw std::runtime_error("Failed to mount Filesystem");
 
-        // static BackedUpJsonResource switchConfigResource(
-        //     BasicJsonResource(std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Switch.a.json"))),
-        //     BasicJsonResource(std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Switch.b.json")))
-        // );
-        // static BackedUpJsonResource loggerConfigResource(
-        //     BasicJsonResource(std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Logger.a.json"))),
-        //     BasicJsonResource(std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Logger.b.json")))
-        // );
-        // static BackedUpJsonResource networkConfigResource(
-        //     BasicJsonResource(std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Network.a.json"))),
-        //     BasicJsonResource(std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Network.b.json")))
-        // );
-        // static BackedUpJsonResource measuringConfigResource(
-        //     BasicJsonResource(std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Measuring.a.json"))),
-        //     BasicJsonResource(std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Measuring.b.json")))
-        // );
-        // static BackedUpJsonResource clockConfigResource(
-        //     BasicJsonResource(std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Clock.a.json"))),
-        //     BasicJsonResource(std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Clock.b.json")))
-        // );
-        // static BackedUpJsonResource trackerConfigResource(
-        //     BasicJsonResource(std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Tracker.a.json"))),
-        //     BasicJsonResource(std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Tracker.b.json")))
-        // );
-
-        static BasicJsonResource switchConfigResource(
-            std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Switch.json"))
+        static BackedUpJsonResource switchConfigResource(
+            BasicJsonResource(std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Switch.a.json"))),
+            BasicJsonResource(std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Switch.b.json")))
         );
-        static BasicJsonResource loggerConfigResource(
-            std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Logger.json"))
+        static BackedUpJsonResource loggerConfigResource(
+            BasicJsonResource(std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Logger.a.json"))),
+            BasicJsonResource(std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Logger.b.json")))
         );
-        static BasicJsonResource networkConfigResource(
-            std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Network.json"))
+        static BackedUpJsonResource networkConfigResource(
+            BasicJsonResource(std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Network.a.json"))),
+            BasicJsonResource(std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Network.b.json")))
         );
-        static BasicJsonResource measuringConfigResource(
-            std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Measuring.json"))
+        static BackedUpJsonResource measuringConfigResource(
+            BasicJsonResource(std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Measuring.a.json"))),
+            BasicJsonResource(std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Measuring.b.json")))
         );
-        static BasicJsonResource clockConfigResource(
-            std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Clock.json"))
+        static BackedUpJsonResource clockConfigResource(
+            BasicJsonResource(std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Clock.a.json"))),
+            BasicJsonResource(std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Clock.b.json")))
         );
-        static BasicJsonResource trackerConfigResource(
-            std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Tracker.json"))
+        static BackedUpJsonResource trackerConfigResource(
+            BasicJsonResource(std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Tracker.a.json"))),
+            BasicJsonResource(std::unique_ptr<Filesystem::File>(new Filesystem::LittleFsFile("/Config/Tracker.b.json")))
         );
 
         static const Version firmwareVersion(
@@ -125,7 +106,7 @@ void setup()
 
         Logger[LogLevel::Info] << "Boot sequence finished. Running..." << std::endl;
 
-        static Rtos::Task measuringTask("Measuring", 10, 3000, [](Rtos::Task& task){
+        Rtos::Task("Measuring", 10, 3000, [](Rtos::Task& task){
                 while (true)
                 {
                     measurementsValueMutex = measuringUnit->measure();
@@ -135,7 +116,7 @@ void setup()
             Rtos::CpuCore::Core1
         );
 
-        static Rtos::Task trackerTask("Tracker", 1, 8000, [](Rtos::Task& task){
+        Rtos::Task("Tracker", 1, 8000, [](Rtos::Task& task){
             while (true)
             {
                 Rtos::ValueMutex<MeasurementList>::Lock measurements = measurementsValueMutex.get();
@@ -146,6 +127,7 @@ void setup()
                         tracker.second.track(measurements->front().value);
                 }
                 delay(1000);
+                Logger[LogLevel::Debug] << "tracking..." << std::endl;
             }
         });
     }

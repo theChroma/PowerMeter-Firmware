@@ -3,9 +3,7 @@
 #include "ExceptionTrace/ExceptionTrace.h"
 #include "Logger/Logger.h"
 #include "ScopeProfiler/ScopeProfiler.h"
-
 #include <math.h>
-#include <sstream>
 #include <utility>
 
 
@@ -136,9 +134,7 @@ void Tracker::updateData(const std::vector<float>& newValues)
     }
     catch(...)
     {
-        std::stringstream errorMessage;
-        errorMessage << SOURCE_LOCATION << "Failed to update Data with " << json(newValues);
-        ExceptionTrace::trace(errorMessage.str());
+        ExceptionTrace::trace(SOURCE_LOCATION + "Failed to update Data with " + json(newValues).dump());
         throw;
     }
 }

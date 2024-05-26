@@ -28,12 +28,14 @@ LittleFsDirectory::LittleFsDirectory(std::string path) noexcept : m_path(std::mo
 
 Directory::Entries LittleFsDirectory::getEntries() const
 {
-    auto directory = std_experimental::unique_resource<DIR*, std::function<int(DIR*)>>(
-        opendir(m_path.c_str()),
+    DIR* rawDirectory = opendir(m_path.c_str());
+    if (!rawDirectory)
+        throw std::runtime_error(SOURCE_LOCATION + "Failed to open directory at \"" + m_path + '"');
+
+    auto directory = std_experimental::unique_resource<DIR*, int(*)(DIR*)>(
+        std::move(rawDirectory),
         closedir
     );
-    if (!directory)
-        throw std::runtime_error(SOURCE_LOCATION + "Failed to open directory at \"" + m_path + '"');
 
     struct dirent* directoryEntry;
     Entries entries(compareEntries);
