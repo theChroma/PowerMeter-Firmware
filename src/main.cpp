@@ -9,7 +9,6 @@
 #include "JsonResource/BackedUpJsonResource/BackedUpJsonResource.h"
 #include "JsonResource/BasicJsonResource/BasicJsonResource.h"
 #include "ScopeProfiler/ScopeProfiler.h"
-#include "FileBrowser/FileBrowser.h"
 #include "Filesystem/Directory/LittleFsDirectory/LittleFsDirectory.h"
 #include "Filesystem/File/LittleFsFile/LittleFsFile.h"
 #include "RestApi/RestApi.h"
