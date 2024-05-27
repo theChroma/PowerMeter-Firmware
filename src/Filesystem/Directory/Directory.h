@@ -13,6 +13,7 @@ namespace Filesystem
         using Entries = std::set<std::unique_ptr<Entry>, bool(*)(const std::unique_ptr<Entry>&, const std::unique_ptr<Entry>&)>;
         virtual Entries getEntries() const = 0;
         virtual void create() = 0;
+        json toJson() const override;
         inline virtual ~Directory() noexcept = default;
     };
 }

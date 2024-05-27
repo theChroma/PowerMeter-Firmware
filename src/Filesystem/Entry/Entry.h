@@ -13,6 +13,7 @@ namespace Filesystem
         virtual bool exists() const = 0;
         virtual void create() = 0;
         virtual void remove() = 0;
+        virtual json toJson() const;
         inline virtual ~Entry() noexcept = default;
     };
 }

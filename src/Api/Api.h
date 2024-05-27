@@ -14,42 +14,44 @@ namespace Api
         RestApi* restApi,
         const Version& firmwareVersion,
         const Version& apiVersion
-    );
+    ) noexcept;
+
+    void createFilesystemEndpoints(RestApi* restApi) noexcept;
 
     void createLoggerEndpoints(
         RestApi* restApi,
         JsonResource* configResource,
         AsyncWebServer* server
-    );
+    ) noexcept;
 
     void createSwitchEndpoints(
         RestApi* restApi,
         JsonResource* configResource,
         Switch** switchUnit
-    );
+    ) noexcept;
 
     void createMeasuringEndpoints(
         RestApi* restApi,
         JsonResource* configResource,
         MeasuringUnit** measuringUnit,
         Rtos::ValueMutex<MeasurementList>* measurementsValueMutex
-    );
+    ) noexcept;
 
     void createClockEndpoints(
         RestApi* restApi,
         JsonResource* configResource,
         Clock** clock
-    );
+    ) noexcept;
 
     void createNetworkEndpoints(
         RestApi* restApi,
         JsonResource* configResource
-    );
+    ) noexcept;
 
     void createTrackerEndpoints(
         RestApi* restApi,
         JsonResource* configResource,
         Rtos::ValueMutex<TrackerMap>* trackersValueMutex,
         const Clock* clock
-    );
+    ) noexcept;
 };

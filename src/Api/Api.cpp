@@ -5,12 +5,11 @@
 #include "Logger/Logger.h"
 #include "ExceptionTrace/ExceptionTrace.h"
 #include "SourceLocation/SourceLocation.h"
+#include "Filesystem/Directory/LittleFsDirectory/LittleFsDirectory.h"
 #include "WifiScan/WifiScan.h"
-#include <WiFi.h>
 #include <LittleFS.h>
-#include <functional>
 #include <vector>
-
+#include "ScopeProfiler/ScopeProfiler.h"
 
 namespace
 {
@@ -73,7 +72,7 @@ namespace
 }
 
 
-void Api::createSystemEndpoints(RestApi* restApi, const Version& firmwareVersion, const Version& apiVersion)
+void Api::createSystemEndpoints(RestApi* restApi, const Version& firmwareVersion, const Version& apiVersion) noexcept
 {
     restApi->handle("/info", HTTP_GET, [firmwareVersion, apiVersion](RestApi::JsonRequest){
         std::stringstream chipdId;
@@ -100,14 +99,22 @@ void Api::createSystemEndpoints(RestApi* restApi, const Version& firmwareVersion
 
     restApi->handle("/reboot", HTTP_POST, [](RestApi::JsonRequest){
         return RestApi::JsonResponse(nullptr, 204, {}, []{
-            Logger[LogLevel::Info] << "Rebooting PowerMeter..." << std::endl;
+            Logger[LogLevel::Info] << "Rebooting..." << std::endl;
             ESP.restart();
         });
     });
 }
 
 
-void Api::createLoggerEndpoints(RestApi* restApi, JsonResource* configResource, AsyncWebServer* server)
+void Api::createFilesystemEndpoints(RestApi *restApi) noexcept
+{
+    restApi->handle("/files(.*)", HTTP_GET, [](const RestApi::JsonRequest& request){
+        return Filesystem::LittleFsDirectory(request.serverRequest.pathArg(1).c_str()).toJson().at("children");
+    });
+}
+
+
+void Api::createLoggerEndpoints(RestApi* restApi, JsonResource* configResource, AsyncWebServer* server) noexcept
 {
     restApi->handle("/logger/config", HTTP_GET, [configResource](RestApi::JsonRequest){
         return getJsonResource(configResource);
@@ -139,7 +146,7 @@ void Api::createMeasuringEndpoints(
     JsonResource* configResource,
     MeasuringUnit** measuringUnit,
     Rtos::ValueMutex<MeasurementList>* measurementsValueMutex
-)
+) noexcept
 {
     restApi->handle("/measurements", HTTP_GET, [measurementsValueMutex](RestApi::JsonRequest){
         json responseJson = json::array_t();
@@ -174,7 +181,7 @@ void Api::createMeasuringEndpoints(
 }
 
 
-void Api::createSwitchEndpoints(RestApi* restApi, JsonResource* configResource, Switch** switchUnit)
+void Api::createSwitchEndpoints(RestApi* restApi, JsonResource* configResource, Switch** switchUnit) noexcept
 {
     restApi->handle("/switch", HTTP_GET, [&switchUnit](RestApi::JsonRequest){
         json responseJson;
@@ -218,7 +225,7 @@ void Api::createSwitchEndpoints(RestApi* restApi, JsonResource* configResource, 
 }
 
 
-void Api::createClockEndpoints(RestApi* restApi, JsonResource* configResource, Clock** clock)
+void Api::createClockEndpoints(RestApi* restApi, JsonResource* configResource, Clock** clock) noexcept
 {
     restApi->handle("/clock/config", HTTP_GET, [configResource](RestApi::JsonRequest){
         return getJsonResource(configResource);
@@ -250,7 +257,7 @@ void Api::createTrackerEndpoints(
     JsonResource* configResource,
     Rtos::ValueMutex<TrackerMap>* trackersValueMutex,
     const Clock* clock
-)
+) noexcept
 {
     restApi->handle("/trackers", HTTP_GET, [trackersValueMutex](RestApi::JsonRequest){
         Rtos::ValueMutex<TrackerMap>::Lock trackers = trackersValueMutex->get();
@@ -323,7 +330,7 @@ void Api::createTrackerEndpoints(
 }
 
 
-void Api::createNetworkEndpoints(RestApi* restApi, JsonResource* configResource)
+void Api::createNetworkEndpoints(RestApi* restApi, JsonResource* configResource) noexcept
 {
     restApi->handle("/network/config", HTTP_GET, [configResource](RestApi::JsonRequest){
         return getJsonResource(configResource);

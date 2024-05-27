@@ -41,7 +41,7 @@ Directory::Entries LittleFsDirectory::getEntries() const
     Entries entries(compareEntries);
     while (directoryEntry = readdir(directory))
     {
-        std::string entryPath = m_path + '/' + directoryEntry->d_name;
+        std::string entryPath = (m_path == "/" ? "" : m_path) + '/' + directoryEntry->d_name;
         if (directoryEntry->d_type == DT_DIR)
             entries.emplace(new LittleFsDirectory(entryPath));
         else
