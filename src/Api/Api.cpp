@@ -103,11 +103,7 @@ void Api::createSystemEndpoints(RestApi* restApi, const Version& firmwareVersion
             ESP.restart();
         });
     });
-}
 
-
-void Api::createFilesystemEndpoints(RestApi *restApi) noexcept
-{
     restApi->handle("/files(.*)", HTTP_GET, [](const RestApi::JsonRequest& request){
         return Filesystem::LittleFsDirectory(request.serverRequest.pathArg(1).c_str()).toJson().at("children");
     });

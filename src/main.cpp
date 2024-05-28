@@ -96,7 +96,6 @@ void setup()
         trackersValueMutex = Config::configureTrackers(&trackerConfigResource, clock);
 
         Api::createSystemEndpoints(&restApi, firmwareVersion, apiVersion);
-        Api::createFilesystemEndpoints(&restApi);
         Api::createLoggerEndpoints(&restApi, &loggerConfigResource, &server);
         Api::createSwitchEndpoints(&restApi, &switchConfigResource, &switchUnit);
         Api::createClockEndpoints(&restApi, &clockConfigResource, &clock);

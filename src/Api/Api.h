@@ -16,8 +16,6 @@ namespace Api
         const Version& apiVersion
     ) noexcept;
 
-    void createFilesystemEndpoints(RestApi* restApi) noexcept;
-
     void createLoggerEndpoints(
         RestApi* restApi,
         JsonResource* configResource,
