@@ -16,6 +16,13 @@ std::ostream &MultiLogger::operator[](LogLevel level) noexcept
             return c;
         }
 
+        virtual int sync() override
+        {
+            for (auto& buffer : buffers)
+                buffer->pubsync();
+            return 0;
+        }
+
         std::vector<std::streambuf*> buffers;
     };
 

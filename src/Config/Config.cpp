@@ -63,7 +63,7 @@ namespace
     }
 
 
-    LogStream configureLogStream(const json& configJson, std::ostream& stream)
+    LogStream configureLogStream(const json& configJson, std::ostream* stream)
     {
         LogLevel minLevel = configJson.at("minLevel").get<std::string>();
         LogLevel maxLevel = configJson.at("maxLevel").get<std::string>();
@@ -148,18 +148,31 @@ void Config::configureLogger(const json& configJson, AsyncWebServer* server)
     {
         Serial.begin(configJson.at("/console/baudRate"_json_pointer));
 
-        static std::ofstream logFile;
         std::string logFilePath = configJson.at("/file/filePath"_json_pointer);
-        logFile.open(logFilePath);
+
         server->on("/log", HTTP_GET, [logFilePath](AsyncWebServerRequest* request){
-            logFile.close();
             request->send(LittleFS, logFilePath.c_str(), "text/plain");
-            logFile.open(logFilePath, std::ios::app);
         });
 
+        static Filesystem::LittleFsFile logFile(logFilePath);
+        logFile.create();
+
+        struct LogFileBuffer : public std::stringbuf
+        {
+            virtual int sync() override
+            {
+                *logFile.open(std::ios::app) << str();
+                str("");
+                return 0;
+            }
+        };
+
+        static LogFileBuffer logFileBuffer;
+        static std::ostream logFileStream(&logFileBuffer);
+
         std::vector<LogStream> logStreams = {
-            configureLogStream(configJson.at("console"), std::cout),
-            configureLogStream(configJson.at("file"), logFile),
+            configureLogStream(configJson.at("console"), &std::cout),
+            configureLogStream(configJson.at("file"), &logFileStream),
         };
         Logger = logStreams;
         Logger[LogLevel::Info] << "Logger configured sucessfully." << std::endl;

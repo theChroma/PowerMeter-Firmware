@@ -4,7 +4,7 @@
 #include <algorithm>
 
 
-LogStream::LogStream(LogLevel minLevel, LogLevel maxLevel, std::ostream& stream, bool showLevel) noexcept :
+LogStream::LogStream(LogLevel minLevel, LogLevel maxLevel, std::ostream* stream, bool showLevel) noexcept :
     m_minLevel(minLevel),
     m_maxLevel(maxLevel),
     m_stream(stream),
@@ -17,8 +17,8 @@ std::ostream& LogStream::operator[](LogLevel level) noexcept
     if(level >= m_minLevel && level <= m_maxLevel)
     {
         if(m_showLevel)
-            m_stream << "[" << level << "] ";
-        return m_stream;
+            *m_stream << "[" << level << "] ";
+        return *m_stream;
     }
 
     class NullStreamBuffer : public std::streambuf
