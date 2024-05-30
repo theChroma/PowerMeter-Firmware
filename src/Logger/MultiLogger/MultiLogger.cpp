@@ -1,4 +1,5 @@
 #include "MultiLogger.h"
+#include <mutex>
 
 
 MultiLogger::MultiLogger(const std::vector<LogStream> &streams) : m_streams(streams)
@@ -7,6 +8,7 @@ MultiLogger::MultiLogger(const std::vector<LogStream> &streams) : m_streams(stre
 
 std::ostream &MultiLogger::operator[](LogLevel level) noexcept
 {
+    static std::mutex syncMutex;
     struct MultiStreamBuffer : public std::streambuf
     {
         virtual int overflow(int c) override
@@ -18,6 +20,7 @@ std::ostream &MultiLogger::operator[](LogLevel level) noexcept
 
         virtual int sync() override
         {
+            std::lock_guard<std::mutex> lock(syncMutex);
             for (auto& buffer : buffers)
                 buffer->pubsync();
             return 0;

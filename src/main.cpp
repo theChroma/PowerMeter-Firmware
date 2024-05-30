@@ -105,7 +105,7 @@ void setup()
 
         Logger[LogLevel::Info] << "Boot sequence finished. Running..." << std::endl;
 
-        Rtos::Task("Measuring", 10, 3000, [](Rtos::Task* task){
+        static Rtos::Task measuringTask("Measuring", 10, 3000, [](Rtos::Task* task){
                 while (true)
                 {
                     measurementsValueMutex = measuringUnit->measure();
@@ -115,7 +115,7 @@ void setup()
             Rtos::CpuCore::Core1
         );
 
-        Rtos::Task("Tracker", 1, 8000, [](Rtos::Task* task){
+        static Rtos::Task trackerTask("Tracker", 2, 8000, [](Rtos::Task* task){
             while (true)
             {
                 Rtos::ValueMutex<MeasurementList>::Lock measurements = measurementsValueMutex.get();
@@ -125,6 +125,39 @@ void setup()
                     for (auto& tracker : *trackers)
                         tracker.second.track(measurements->front().value);
                 }
+                delay(1000);
+            }
+        });
+
+        static Rtos::Task wifiTask("WiFi", 1, 8000, [](Rtos::Task* task){
+            wl_status_t previousWifiStatus = WiFi.status();
+            while (true)
+            {
+                wl_status_t wifiStatus = WiFi.status();
+                if (wifiStatus != WL_CONNECTED)
+                    WiFi.reconnect();
+
+                if (wifiStatus == WL_CONNECTED && previousWifiStatus != WL_CONNECTED)
+                {
+                    json configJson = networkConfigResource.deserialize();
+                    json& ipConfigJson = configJson.at("/stationary/ipConfig"_json_pointer);
+                    ipConfigJson["ipAddress"] = WiFi.localIP().toString().c_str();
+                    ipConfigJson["gatewayAddress"] = WiFi.gatewayIP().toString().c_str();
+                    ipConfigJson["subnetMask"] = WiFi.subnetMask().toString().c_str();
+                    networkConfigResource.serialize(configJson);
+
+                    bool accesspointAlwaysActive = configJson.at("/accesspoint/alwaysActive"_json_pointer);
+                    if (!accesspointAlwaysActive)
+                        WiFi.mode(WIFI_STA);
+
+                    Logger[LogLevel::Info]
+                        << "(Re)connected to \""
+                        << WiFi.SSID().c_str()
+                        << "\", IP: "
+                        << WiFi.localIP().toString().c_str()
+                        << std::endl;
+                }
+                previousWifiStatus = wifiStatus;
                 delay(1000);
             }
         });

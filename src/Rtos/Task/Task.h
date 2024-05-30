@@ -3,6 +3,7 @@
 #include "Rtos/CpuCore/CpuCore.h"
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+#include <unique_resource.hpp>
 #include <functional>
 #include <string>
 
@@ -31,6 +32,8 @@ namespace Rtos
         static void cancelByHandle(TaskHandle_t handle) noexcept;
 
         Code m_code;
-        TaskHandle_t m_handle;
+
+        using Handle = std_experimental::unique_resource<TaskHandle_t, std::function<void(TaskHandle_t)>>;
+        Handle m_handle;
     };
 }

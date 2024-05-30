@@ -8,6 +8,7 @@
 #include <utility>
 
 using namespace Rtos;
+using namespace std_experimental;
 
 
 Task::Task(
@@ -16,8 +17,9 @@ Task::Task(
     size_t stackSize_B,
     Code code,
     CpuCore executionCore
-) : m_code(std::move(code))
+) : m_code(std::move(code)), m_handle(nullptr, nullptr, false)
 {
+    TaskHandle_t handle = nullptr;
     BaseType_t status = xTaskCreateUniversal(
         [](void* context){
             taskFunction(static_cast<Task*>(context));
@@ -26,18 +28,19 @@ Task::Task(
         stackSize_B,
         this,
         priority,
-        &m_handle,
+        &handle,
         static_cast<BaseType_t>(executionCore)
     );
     if (status != pdPASS)
     {
         throw std::runtime_error(SOURCE_LOCATION + "Failed to create task \"" + name + "\"");
     }
+    m_handle = Handle(std::move(handle), cancelByHandle);
 }
 
 
 Task::Task(TaskHandle_t handle) noexcept :
-    m_handle(handle)
+    m_handle(Handle(std::move(handle), cancelByHandle))
 {}
 
 
