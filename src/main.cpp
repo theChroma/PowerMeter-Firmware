@@ -118,18 +118,18 @@ void setup()
         static Rtos::Task trackerTask("Tracker", 2, 8000, [](Rtos::Task* task){
             while (true)
             {
-                Rtos::ValueMutex<MeasurementList>::Lock measurements = measurementsValueMutex.get();
-                if (measurements->size() > 0)
+                MeasurementList measurements = *measurementsValueMutex.get();
+                if (measurements.size() > 0)
                 {
                     Rtos::ValueMutex<TrackerMap>::Lock trackers = trackersValueMutex.get();
                     for (auto& tracker : *trackers)
-                        tracker.second.track(measurements->front().value);
+                        tracker.second.track(measurements.front().value);
                 }
                 delay(1000);
             }
         });
 
-        static Rtos::Task wifiTask("WiFi", 1, 8000, [](Rtos::Task* task){
+        static Rtos::Task wifiTask("WiFi", 1, 3000, [](Rtos::Task* task){
             wl_status_t previousWifiStatus = WiFi.status();
             while (true)
             {

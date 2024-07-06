@@ -159,7 +159,7 @@ void Config::configureLogger(const json& configJson, AsyncWebServer* server)
 
         struct LogFileBuffer : public std::stringbuf
         {
-            virtual int sync() override
+            int sync() override
             {
                 *logFile.open(std::ios::app) << str();
                 str("");
@@ -420,7 +420,7 @@ TrackerMap Config::configureTrackers(const json& configJson, const Clock* clock)
         TrackerMap trackers;
         for(const auto& trackerJson : configJson.at("trackers").items())
         {
-            const std::string& trackerId = trackerJson.key();
+            std::string trackerId = trackerJson.key();
             Filesystem::Directory::Entries::iterator toBeKeptEntryPosition = std::find_if(
                 toBeRemovedEntries.begin(),
                 toBeRemovedEntries.end(),
@@ -433,7 +433,7 @@ TrackerMap Config::configureTrackers(const json& configJson, const Clock* clock)
 
             std::string trackerDirectoryPath = trackersDirectory.getPath() + '/' + trackerId;
 
-            trackers.emplace(trackerId, Tracker(
+            trackers.insert(std::make_pair<std::string, Tracker>(std::move(trackerId), Tracker(
                 trackerJson.value().at("title"),
                 trackerJson.value().at("duration_s"),
                 trackerJson.value().at("sampleCount"),
@@ -496,7 +496,7 @@ TrackerMap Config::configureTrackers(const json& configJson, const Clock* clock)
                         )
                     )
                 )
-            ));
+            )));
         }
         Logger[LogLevel::Info] << "Trackers configured sucessfully." << std::endl;
         return trackers;

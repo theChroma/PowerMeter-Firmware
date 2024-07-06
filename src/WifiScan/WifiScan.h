@@ -6,7 +6,7 @@ class WifiScan
 {
 public:
     WifiScan(uint32_t timeout_ms = 10000);
-    virtual ~WifiScan();
+    ~WifiScan();
 
     json toJson();
 

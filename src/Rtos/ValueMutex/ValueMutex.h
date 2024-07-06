@@ -59,11 +59,6 @@ namespace Rtos
             return Lock(&m_value, m_lockable);
         }
 
-        // inline operator Lock()
-        // {
-        //     return get();
-        // }
-
     private:
         Lockable m_lockable;
         T m_value;

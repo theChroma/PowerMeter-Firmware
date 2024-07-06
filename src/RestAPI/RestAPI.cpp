@@ -109,7 +109,7 @@ void RestApi::handle(const std::string &uri, WebRequestMethod method, const Json
         AsyncWebServerResponse* response = request->beginResponse(
             jsonResponse.statusCode,
             "application/json",
-            (jsonResponse.data == nullptr && jsonResponse.statusCode == 204 ) ? "" : jsonResponse.data.dump(1, '\t').c_str()
+            (jsonResponse.data == nullptr && jsonResponse.statusCode == 204 ) ? "" : jsonResponse.data.dump(-1, '\t').c_str()
         );
         response->addHeader("Access-Control-Allow-Origin", "*");
         for (const auto& header : jsonResponse.headers)

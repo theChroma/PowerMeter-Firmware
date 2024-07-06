@@ -87,7 +87,6 @@ bool LittleFsDirectory::exists() const
 
 void LittleFsDirectory::remove()
 {
-    Logger[LogLevel::Debug] << "Trying to remove dir " << m_path << std::endl;
     while (true)
     {
         Entries entries = getEntries();

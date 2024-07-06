@@ -11,14 +11,14 @@ std::ostream &MultiLogger::operator[](LogLevel level) noexcept
     static std::mutex syncMutex;
     struct MultiStreamBuffer : public std::streambuf
     {
-        virtual int overflow(int c) override
+        int overflow(int c) override
         {
             for (auto& buffer : buffers)
                 buffer->sputc(c);
             return c;
         }
 
-        virtual int sync() override
+        int sync() override
         {
             std::lock_guard<std::mutex> lock(syncMutex);
             for (auto& buffer : buffers)

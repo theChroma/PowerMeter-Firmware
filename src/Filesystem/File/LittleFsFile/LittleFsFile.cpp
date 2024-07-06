@@ -60,7 +60,6 @@ bool LittleFsFile::exists() const
 
 void LittleFsFile::remove()
 {
-    Logger[LogLevel::Debug] << "Trying to remove file " << m_path << std::endl;
     if (!LittleFS.remove(m_path.c_str()))
         throw std::runtime_error(SOURCE_LOCATION + "Failed to remove file at \"" + m_path + '"');
 }

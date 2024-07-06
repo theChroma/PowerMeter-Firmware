@@ -12,4 +12,5 @@ public:
     virtual void remove() = 0;
     json deserializeOr(const json& defaultJson) const;
     json deserializeOrGet(const std::function<json()>& getDefaultJson) const;
+    inline virtual ~JsonResource() noexcept = default;
 };

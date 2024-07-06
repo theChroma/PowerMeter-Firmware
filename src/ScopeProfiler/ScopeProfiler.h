@@ -6,7 +6,7 @@ class ScopeProfiler
 {
 public:
     ScopeProfiler(const std::string& name);
-    virtual ~ScopeProfiler();
+    ~ScopeProfiler();
 
 private:
     std::string m_name;

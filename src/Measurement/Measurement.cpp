@@ -7,5 +7,6 @@ json Measurement::toJson() const
         {"name", name},
         {"value", value},
         {"unit", unit},
+        {"fractionDigits", fractionDigits},
     };
 }

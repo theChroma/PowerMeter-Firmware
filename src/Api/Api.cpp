@@ -10,6 +10,7 @@
 #include <LittleFS.h>
 #include <vector>
 #include "ScopeProfiler/ScopeProfiler.h"
+#include <esp_task_wdt.h>
 
 namespace
 {
@@ -179,7 +180,7 @@ void Api::createMeasuringEndpoints(
 
 void Api::createSwitchEndpoints(RestApi* restApi, JsonResource* configResource, Switch** switchUnit) noexcept
 {
-    restApi->handle("/switch", HTTP_GET, [&switchUnit](RestApi::JsonRequest){
+    restApi->handle("/switch", HTTP_GET, [switchUnit](RestApi::JsonRequest){
         json responseJson;
         tl::optional<bool> state = (*switchUnit)->getState();
         if (state.has_value())
@@ -296,7 +297,12 @@ void Api::createTrackerEndpoints(
         std::stringstream key;
         key << request.data.at("duration_s") << "_" << request.data.at("sampleCount");
         configJson["trackers"][key.str()] = request.data;
-        *trackersValueMutex = Config::configureTrackers(configJson, clock);
+        Config::configureTrackers(configJson, clock);
+        esp_task_wdt_reset();
+        Config::configureTrackers(configJson, clock);
+        esp_task_wdt_reset();
+        Config::configureTrackers(configJson, clock);
+        esp_task_wdt_reset();
         configResource->serialize(configJson);
         return RestApi::JsonResponse(configJson, 201);
     });
@@ -353,7 +359,6 @@ void Api::createNetworkEndpoints(RestApi* restApi, JsonResource* configResource)
 
     restApi->handle("/network/config/restore-default", HTTP_POST, [configResource](RestApi::JsonRequest){
         RestApi::JsonResponse response = Config::getNetworkDefault();
-        Logger[LogLevel::Debug] << response.data.dump(2, ' ') << std::endl;
         response.doAfterSend = [configResource, response]{
             json configJson = response.data;
             Config::configureNetwork(&configJson);
