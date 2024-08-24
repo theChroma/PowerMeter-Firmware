@@ -13,7 +13,7 @@ float AcPower::getVoltage_V() const noexcept
 {
     if (m_voltage_V <= 0.0f)
         return 0.0f;
-    return m_voltage_V <= 0.0f;
+    return m_voltage_V;
 }
 
 
