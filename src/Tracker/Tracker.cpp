@@ -40,7 +40,7 @@ void Tracker::track(float value)
         time_t secondsSinceLastInput = now - lastInputTimestamp;
 
         if(secondsSinceLastInput <= 0)
-            return;
+            lastInputTimestamp = now;
 
         m_lastInputResource->serialize(now);
         m_accumulator.add(value, secondsSinceLastInput);

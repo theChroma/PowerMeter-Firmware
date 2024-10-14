@@ -129,7 +129,7 @@ void setup()
             }
         });
 
-        static Rtos::Task wifiTask("WiFi", 1, 3000, [](Rtos::Task* task){
+        static Rtos::Task wifiTask("WiFi", 1, 5000, [](Rtos::Task* task){
             wl_status_t previousWifiStatus = WiFi.status();
             while (true)
             {
