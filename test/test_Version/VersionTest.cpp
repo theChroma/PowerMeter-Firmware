@@ -3,8 +3,6 @@
 #include <gtest/gtest.h>
 #include <sstream>
 
-using PM::Version;
-
 TEST(VersionTest, parseAndPrint)
 {
     std::string version("1.2.3");
@@ -64,7 +62,7 @@ TEST(VersionTest, lessOrEqual)
     EXPECT_FALSE(Version(1, 2, 3) <= Version(1, 2, 2));
 }
 
-int main()
+int main(int argc, char **argv)
 {
     testing::InitGoogleTest();
     return RUN_ALL_TESTS();

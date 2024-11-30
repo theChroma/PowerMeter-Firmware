@@ -1,14 +1,13 @@
-#include "Measurement/AcMeasurement/AcMeasurement.h"
+#include "AcPower/AcPower.h"
 
 #include <gtest/gtest.h>
 
-using namespace PM;
 
 constexpr float voltageRMS_V = 230.0f;
 constexpr float currentRMS_A = 1.0f;
 constexpr float activePower_W = 100.0f;
 
-AcMeasurement uut(voltageRMS_V, currentRMS_A, activePower_W);
+AcPower uut(voltageRMS_V, currentRMS_A, activePower_W);
 
 TEST(ACPowerTest, getValues)
 {

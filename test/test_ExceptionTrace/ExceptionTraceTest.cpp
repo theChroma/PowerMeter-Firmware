@@ -4,8 +4,6 @@
 #include <iostream>
 #include <gtest/gtest.h>
 
-using namespace PM;
-
 void c()
 {
     try
@@ -55,7 +53,7 @@ void b1()
     {
         EXPECT_TRUE(true) << "Caught runtime_error" << std::endl;
     }
-    
+
 }
 
 void a1()
@@ -69,7 +67,7 @@ void a1()
         ExceptionTrace::trace("a");
         throw;
     }
-    
+
 }
 
 

@@ -119,7 +119,12 @@ void Tracker::updateData(const std::vector<float>& newValues)
         json values = m_dataResource->deserializeOr(json::array_t());
 
         for (const auto& value : newValues)
-            values.push_back(value);
+        {
+            if (isfinite(value))
+                values.push_back(value);
+            else
+                values.push_back(nullptr);
+        }
 
         if(values.size() > m_sampleCount)
             values.erase(values.begin(), values.begin() + values.size() - m_sampleCount);

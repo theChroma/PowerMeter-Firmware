@@ -1,9 +1,8 @@
-#ifndef MOCKCLOCK_H
-#define MOCKCLOCK_H
+#pragma once
 
 #include "Clock/Clock.h"
 
-class MockClock : public PM::Clock
+class MockClock : public Clock
 {
 public:
     MockClock(time_t timestamp = 0) : m_now(timestamp)
@@ -26,5 +25,3 @@ public:
 private:
     time_t m_now = 0;
 };
-
-#endif

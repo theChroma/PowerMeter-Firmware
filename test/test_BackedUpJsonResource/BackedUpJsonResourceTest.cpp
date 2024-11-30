@@ -29,7 +29,7 @@ TEST_F(BackedUpJsonResourceTest, serialize)
 
 TEST_F(BackedUpJsonResourceTest, deserialize)
 {
-    // mockFileB->stream << testJson;
+    mockFileB->stream << testJson;
     try
     {
         uut.deserialize();

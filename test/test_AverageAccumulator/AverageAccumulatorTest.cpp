@@ -1,12 +1,11 @@
 #include "AverageAccumulator/AverageAccumulator.h"
+#include "MockJsonResource.h"
 
 #include <gtest/gtest.h>
 #include <math.h>
 #include <vector>
 
 #define PI 3.14159265
-
-using namespace PM;
 
 
 struct AverageAccumulatorTest : public testing::Test
@@ -16,7 +15,7 @@ struct AverageAccumulatorTest : public testing::Test
         std::filesystem::remove("AverageAccumulatorTest.json");
     }
 
-    AverageAccumulator uut = AverageAccumulator(JsonResource("AverageAccumulatorTest.json"));
+    AverageAccumulator uut = AverageAccumulator(std::make_unique<MockJsonResource>());
 };
 
 

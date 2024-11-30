@@ -11,8 +11,8 @@ TEST(MultiLoggerTest, logAll)
     std::stringstream testStream1;
     std::stringstream testStream2;
     MultiLogger uut({
-        LogStream(LogLevel::Error, LogLevel::Verbose, testStream1, false),
-        LogStream(LogLevel::Error, LogLevel::Verbose, testStream2, false),
+        LogStream(LogLevel::Error, LogLevel::Verbose, &testStream1, false),
+        LogStream(LogLevel::Error, LogLevel::Verbose, &testStream2, false),
     });
     uut[LogLevel::Verbose] << testString;
     EXPECT_EQ(testString, testStream1.str());
@@ -22,7 +22,7 @@ TEST(MultiLoggerTest, logAll)
 TEST(MultiLoggerTest, showLevel)
 {
     std::stringstream testStream;
-    MultiLogger uut({LogStream(LogLevel::Error, LogLevel::Verbose, testStream, true)});
+    MultiLogger uut({LogStream(LogLevel::Error, LogLevel::Verbose, &testStream, true)});
 
     uut[LogLevel::Error] << testString;
     EXPECT_EQ(std::string("[ERROR] ") + testString, testStream.str());
@@ -48,7 +48,7 @@ TEST(MultiLoggerTest, showLevel)
 TEST(MultiLoggerTest, minAndMaxLevel)
 {
     std::stringstream testStream;
-    MultiLogger uut({LogStream(LogLevel::Warning, LogLevel::Debug, testStream, false)});
+    MultiLogger uut({LogStream(LogLevel::Warning, LogLevel::Debug, &testStream, false)});
 
     uut[LogLevel::Error] << testString;
     EXPECT_EQ("", testStream.str());
