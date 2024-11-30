@@ -3,7 +3,6 @@
 #include "WifiScan.h"
 #include "SourceLocation/SourceLocation.h"
 #include <WiFi.h>
-#include <esp_task_wdt.h>
 
 namespace
 {
@@ -49,7 +48,6 @@ WifiScan::WifiScan(uint32_t timeout_ms)
         if (millis() - startTime > timeout_ms)
             throw std::runtime_error(SOURCE_LOCATION + "Scanning WiFi networks timed out");
         delay(100);
-        esp_task_wdt_reset();
     }
 }
 

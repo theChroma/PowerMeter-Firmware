@@ -24,6 +24,7 @@
 
 void setup()
 {
+    esp_task_wdt_init(10, true);
     Serial.begin(115200);
     try
     {
@@ -87,13 +88,12 @@ void setup()
         Logger[LogLevel::Info] << "Firmware version v" << firmwareVersion << std::endl;
         Logger[LogLevel::Info] << "API version v" << apiVersion << std::endl;
         Config::configureNetwork(&networkConfigResource);
-        server.begin();
         static Switch* switchUnit = Config::configureSwitch(&switchConfigResource);
         static Clock* clock = Config::configureClock(&clockConfigResource);
         static MeasuringUnit* measuringUnit = Config::configureMeasuring(&measuringConfigResource);
         static Rtos::ValueMutex<MeasurementList> measurementsValueMutex;
         static Rtos::ValueMutex<TrackerMap> trackersValueMutex;
-        trackersValueMutex = Config::configureTrackers(&trackerConfigResource, clock);
+        *trackersValueMutex.get() = Config::configureTrackers(&trackerConfigResource, clock);
 
         Api::createSystemEndpoints(&restApi, firmwareVersion, apiVersion);
         Api::createLoggerEndpoints(&restApi, &loggerConfigResource, &server);
@@ -102,13 +102,14 @@ void setup()
         Api::createTrackerEndpoints(&restApi, &trackerConfigResource, &trackersValueMutex, clock);
         Api::createNetworkEndpoints(&restApi, &networkConfigResource);
         Api::createMeasuringEndpoints(&restApi, &measuringConfigResource, &measuringUnit, &measurementsValueMutex);
+        server.begin();
 
         Logger[LogLevel::Info] << "Boot sequence finished. Running..." << std::endl;
 
         static Rtos::Task measuringTask("Measuring", 10, 3000, [](Rtos::Task* task){
                 while (true)
                 {
-                    measurementsValueMutex = measuringUnit->measure();
+                    *measurementsValueMutex.get() = measuringUnit->measure();
                     delay(1000);
                 }
             },
@@ -118,12 +119,14 @@ void setup()
         static Rtos::Task trackerTask("Tracker", 2, 8000, [](Rtos::Task* task){
             while (true)
             {
-                MeasurementList measurements = *measurementsValueMutex.get();
-                if (measurements.size() > 0)
                 {
-                    Rtos::ValueMutex<TrackerMap>::Lock trackers = trackersValueMutex.get();
-                    for (auto& tracker : *trackers)
-                        tracker.second.track(measurements.front().value);
+                    MeasurementList measurements = *measurementsValueMutex.get();
+                    if (measurements.size() > 0)
+                    {
+                        Rtos::ValueMutex<TrackerMap>::Lock trackers = trackersValueMutex.get();
+                        for (auto& tracker : *trackers)
+                            tracker.second.track(measurements.front().value);
+                    }
                 }
                 delay(1000);
             }
@@ -140,10 +143,14 @@ void setup()
                 if (wifiStatus == WL_CONNECTED && previousWifiStatus != WL_CONNECTED)
                 {
                     json configJson = networkConfigResource.deserialize();
-                    json& ipConfigJson = configJson.at("/stationary/ipConfig"_json_pointer);
+                    json& stationaryJson = configJson.at("stationary");
+                    stationaryJson["ssid"] = WiFi.SSID().c_str();
+                    stationaryJson["password"] = WiFi.psk().c_str();
+                    json& ipConfigJson = stationaryJson.at("ipConfig");
                     ipConfigJson["ipAddress"] = WiFi.localIP().toString().c_str();
                     ipConfigJson["gatewayAddress"] = WiFi.gatewayIP().toString().c_str();
                     ipConfigJson["subnetMask"] = WiFi.subnetMask().toString().c_str();
+
                     networkConfigResource.serialize(configJson);
 
                     bool accesspointAlwaysActive = configJson.at("/accesspoint/alwaysActive"_json_pointer);
@@ -158,7 +165,7 @@ void setup()
                         << std::endl;
                 }
                 previousWifiStatus = wifiStatus;
-                delay(1000);
+                delay(10000);
             }
         });
     }

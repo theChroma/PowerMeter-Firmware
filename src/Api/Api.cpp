@@ -10,7 +10,6 @@
 #include <LittleFS.h>
 #include <vector>
 #include "ScopeProfiler/ScopeProfiler.h"
-#include <esp_task_wdt.h>
 
 namespace
 {
@@ -287,7 +286,7 @@ void Api::createTrackerEndpoints(
     restApi->handle("/trackers/config", HTTP_PATCH, [configResource, clock, trackersValueMutex](const RestApi::JsonRequest& request){
         json configJson = configResource->deserialize();
         patchJson(configJson, request.data);
-        *trackersValueMutex = Config::configureTrackers(configJson, clock);
+        *trackersValueMutex->get() = Config::configureTrackers(configJson, clock);
         configResource->serialize(configJson);
         return configJson;
     });
@@ -297,23 +296,21 @@ void Api::createTrackerEndpoints(
         std::stringstream key;
         key << request.data.at("duration_s") << "_" << request.data.at("sampleCount");
         configJson["trackers"][key.str()] = request.data;
-        Config::configureTrackers(configJson, clock);
-        esp_task_wdt_reset();
-        Config::configureTrackers(configJson, clock);
-        esp_task_wdt_reset();
-        Config::configureTrackers(configJson, clock);
-        esp_task_wdt_reset();
+        *trackersValueMutex->get() = Config::configureTrackers(configJson, clock);
         configResource->serialize(configJson);
         return RestApi::JsonResponse(configJson, 201);
     });
 
-    restApi->handle("/trackers/config/(.*)", HTTP_DELETE,
+    restApi->handle("/trackers/config", HTTP_DELETE,
         [configResource, trackersValueMutex, clock](const RestApi::JsonRequest& request){
             json configJson = configResource->deserialize();
-            std::string trackerId = request.serverRequest.pathArg(1).c_str();
-            if (!configJson.at("trackers").erase(trackerId))
-                throw std::runtime_error(SOURCE_LOCATION + " \"" + trackerId + "\" is not a valid tracker ID");
-            *trackersValueMutex = Config::configureTrackers(configJson, clock);
+            for (const json& entry : request.data)
+            {
+                const std::string& trackerId = entry;
+                if (!configJson.at("trackers").erase(trackerId))
+                    throw std::runtime_error(SOURCE_LOCATION + " \"" + trackerId + "\" is not a valid tracker ID");
+            }
+            *trackersValueMutex->get() = Config::configureTrackers(configJson, clock);
             configResource->serialize(configJson);
             return RestApi::JsonResponse(configJson);
         }
@@ -325,7 +322,7 @@ void Api::createTrackerEndpoints(
 
     restApi->handle("/trackers/config/restore-default", HTTP_POST, [configResource, trackersValueMutex, clock](RestApi::JsonRequest){
         json defaultConfigJson = Config::getTrackersDefault();
-        *trackersValueMutex = Config::configureTrackers(defaultConfigJson, clock);
+        *trackersValueMutex->get() = Config::configureTrackers(defaultConfigJson, clock);
         configResource->serialize(defaultConfigJson);
         return defaultConfigJson;
     });
