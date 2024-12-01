@@ -27,12 +27,13 @@ BackedUpJsonResource::BackedUpJsonResource(BasicJsonResource resourceA, BasicJso
 }
 
 
-json BackedUpJsonResource::deserialize() const
+json BackedUpJsonResource::deserialize()
 {
     try
     {
         return m_preferredResourceForRead->deserializeOrGet([this]{
-            return m_preferredResourceForWrite->deserialize();
+            std::swap(m_preferredResourceForRead, m_preferredResourceForWrite);
+            return m_preferredResourceForRead->deserialize();
         });
     }
     catch(...)

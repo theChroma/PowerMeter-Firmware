@@ -7,7 +7,7 @@ class BackedUpJsonResource : public JsonResource
 public:
     BackedUpJsonResource(BasicJsonResource resourceA, BasicJsonResource resourceB);
 
-    json deserialize() const override;
+    json deserialize() override;
     void serialize(const json& data) override;
     void remove() override;
 

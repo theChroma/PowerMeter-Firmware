@@ -10,7 +10,7 @@ BasicJsonResource::BasicJsonResource(std::unique_ptr<Filesystem::File> file, boo
 {}
 
 
-json BasicJsonResource::deserialize() const
+json BasicJsonResource::deserialize()
 {
     try
     {

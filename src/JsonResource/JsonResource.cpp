@@ -2,7 +2,7 @@
 #include "ExceptionTrace/ExceptionTrace.h"
 
 
-json JsonResource::deserializeOr(const json& defaultJson) const
+json JsonResource::deserializeOr(const json& defaultJson)
 {
     try
     {
@@ -16,7 +16,7 @@ json JsonResource::deserializeOr(const json& defaultJson) const
 }
 
 
-json JsonResource::deserializeOrGet(const std::function<json()>& getDefaultJson) const
+json JsonResource::deserializeOrGet(const std::function<json()>& getDefaultJson)
 {
     try
     {

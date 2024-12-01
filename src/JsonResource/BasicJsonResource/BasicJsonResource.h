@@ -10,7 +10,7 @@ class BasicJsonResource : public JsonResource
 public:
     BasicJsonResource(std::unique_ptr<Filesystem::File> file, bool useCaching = true) noexcept;
 
-    json deserialize() const override;
+    json deserialize() override;
     void serialize(const json& data) override;
     void remove() override;
     Filesystem::File& getFile();

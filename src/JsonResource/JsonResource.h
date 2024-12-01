@@ -7,10 +7,10 @@
 class JsonResource
 {
 public:
-    virtual json deserialize() const = 0;
+    virtual json deserialize() = 0;
     virtual void serialize(const json& data) = 0;
     virtual void remove() = 0;
-    json deserializeOr(const json& defaultJson) const;
-    json deserializeOrGet(const std::function<json()>& getDefaultJson) const;
+    json deserializeOr(const json& defaultJson);
+    json deserializeOrGet(const std::function<json()>& getDefaultJson);
     inline virtual ~JsonResource() noexcept = default;
 };

@@ -33,7 +33,10 @@ struct MockFile : public Filesystem::File
     Stream open(std::ios::openmode mode = std::ios::in) override
     {
         if (mode & std::ios::out)
+        {
             lastWriteTimestamp = std::time(nullptr);
+            stream.str("");
+        }
 
         return Stream(&stream, [](std::iostream*){});
     }

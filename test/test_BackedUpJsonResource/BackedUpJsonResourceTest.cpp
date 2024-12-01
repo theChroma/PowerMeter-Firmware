@@ -30,18 +30,25 @@ TEST_F(BackedUpJsonResourceTest, serialize)
 TEST_F(BackedUpJsonResourceTest, deserialize)
 {
     mockFileB->stream << testJson;
-    try
-    {
-        uut.deserialize();
-    }
-    catch (...)
-    {
-        std::cout << ExceptionTrace::what() << std::endl;
-    }
     mockFileA->lastWriteTimestamp = 1;
     mockFileB->lastWriteTimestamp = 2;
     // Should deserialize from B now
     EXPECT_EQ(testJson, uut.deserialize());
+}
+
+
+TEST_F(BackedUpJsonResourceTest, corruptedFile)
+{
+    mockFileA->stream << testJson;
+    mockFileB->stream << "This is corrupted";
+    mockFileA->lastWriteTimestamp = 1;
+    mockFileB->lastWriteTimestamp = 2;
+    // Should deserialize from A now
+    EXPECT_EQ(testJson, uut.deserialize());
+    EXPECT_ANY_THROW(json::parse(mockFileB->stream));
+    uut.serialize(testJson);
+    std::cout << mockFileB->stream.str() << std::endl;
+    EXPECT_EQ(testJson, json::parse(mockFileB->stream));
 }
 
 

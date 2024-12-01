@@ -13,7 +13,7 @@
 
 namespace
 {
-    RestApi::JsonResponse getJsonResource(const JsonResource* jsonResource)
+    RestApi::JsonResponse getJsonResource(JsonResource* jsonResource)
     {
         return RestApi::JsonResponse(jsonResource->deserialize());
     }
