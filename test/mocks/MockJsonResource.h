@@ -5,7 +5,7 @@
 class MockJsonResource : public JsonResource
 {
 public:
-    json deserialize() const override
+    json deserialize() override
     {
         return m_data;
     }
